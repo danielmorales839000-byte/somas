@@ -1,5 +1,7 @@
 # Deployment, security and cost runbook
 
+For registration investigation, safe request-ID diagnostics and read-only database checks, see [REGISTRATION_DIAGNOSIS.md](REGISTRATION_DIAGNOSIS.md). `/health` reports binding presence only; it does not test database connectivity or schema. The auth-only patch requires no migration; the combined Root/Customer Mission feature requires reviewed migration 003 before deployment. See [ROOT_CUSTOMER_INTEGRATION_REVIEW.md](ROOT_CUSTOMER_INTEGRATION_REVIEW.md).
+
 ## Host topology
 
 Cloudflare `wrangler.jsonc` deploys one JavaScript Worker and static files under `public/`. `run_worker_first` makes `/api/*`, `/s/*` and `/health` dynamic. Neon database is accessed using the Neon serverless HTTPS SQL driver with parameterized queries. Public tenants are **logical** routes, not dedicated Vercel/Cloudflare accounts.
@@ -51,7 +53,7 @@ The prototype is designed for **$0 fixed hosting fees within free tiers**, but t
 
 ## Deployment smoke-test checklist
 
-After applying 001 + 002, `npm install`, secrets and `npm run deploy`:
+After explicit approval, applying 001 + 002 + 003, installing dependencies and deploying the tested revision:
 
 - `GET /health` returns `{ok:true,databaseConfigured:true}`.
 - Register owner and sign in; verify cookies secure on HTTPS.

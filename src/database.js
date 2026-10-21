@@ -1,5 +1,6 @@
 import {neon} from '@neondatabase/serverless';
 import {newPolicy,CORE_ROLES} from './agents.js';
+import {rootUnitStatements,customerUnitStatements} from './somas-units.js';
 const id=()=>crypto.randomUUID();
 export function database(env){
   if(!env.DATABASE_URL)throw new Error('missing_database_url');
@@ -45,11 +46,13 @@ export async function provisionProject(sql,userId,{title,purpose,slug,spec}){
   const pid=id();
   const agents=CORE_ROLES.map(role=>({id:id(),role,policy:newPolicy(role)}));
   const inserts=[
+    ...rootUnitStatements(sql),
     sql`INSERT INTO projects (id,workspace_id,slug,title,purpose,spec) VALUES (${pid},${w[0].id},${slug},${title},${purpose},${JSON.stringify(spec)}::jsonb)`,
     sql`INSERT INTO releases (id,project_id,version,spec,source) VALUES (${id()},${pid},1,${JSON.stringify(spec)}::jsonb,'initial_provision')`
   ];
   for(const agent of agents)inserts.push(sql`INSERT INTO agents (id,project_id,role,name,policy,is_core) VALUES (${agent.id},${pid},${agent.role},${agent.role.replace('_',' ')},${JSON.stringify(agent.policy)}::jsonb,true)`);
   inserts.push(sql`INSERT INTO audit_events (id,actor_id,project_id,action) VALUES (${id()},${userId},${pid},'instance_provisioned')`);
+  inserts.push(...customerUnitStatements(sql,{id:pid,workspace_id:w[0].id,purpose}));
   await sql.transaction(inserts);
   return {id:pid,slug,title,purpose,coreAgents:agents.map(({id,role})=>({id,role}))};
 }

@@ -1,5 +1,7 @@
 # SOMAS v2 — Free-first executable alpha
 
+Root/Customer Mission integration is prepared locally: see [ROOT_CUSTOMER_INTEGRATION_REVIEW.md](docs/ROOT_CUSTOMER_INTEGRATION_REVIEW.md) for shared-engine boundaries, migration 003, tests and approval gates. Root plans improve SOMAS; customer plans improve only the owner's application. Plans do not execute or deploy themselves.
+
 > **A completely new codebase.** Cloudflare Worker + Neon PostgreSQL. User-created sites include a private Manager/Assistant panel and independently persisted agents. This alpha is a **constrained vertical slice**, not an arbitrary, autonomous full-stack coding platform.
 
 ## What works in this repository
@@ -19,11 +21,11 @@
 
 ## Fresh deployment: Neon + Cloudflare
 
-**Requirements:** Node.js 20+, npm, a free Neon PostgreSQL project, a Cloudflare account. GitHub is optional until you want CI/CD.
+**Requirements:** Node.js 22+, npm, a free Neon PostgreSQL project, a Cloudflare account. GitHub is optional until you want CI/CD.
 
 1. Download/unzip this project. Do not merge with any older SOMAS app; this repo has a new data model.
 2. Create a database using [Neon](https://console.neon.tech/). Copy its pooled or direct PostgreSQL connection URL from the dashboard. **Never put it in GitHub or public JS.**
-3. In Neon's **SQL Editor**, execute `db/001_initial.sql`, then `db/002_operations.sql` in that order. These scripts use `CREATE TABLE IF NOT EXISTS`, but are **not a full migration framework**.
+3. After schema review/approval, in Neon's **SQL Editor**, execute `db/001_initial.sql`, `db/002_operations.sql`, then `db/003_recursive_units.sql` in that order. Back up existing data first; test 003 on a dedicated branch/database. These scripts are **not a full migration framework**. Do not deploy the mission feature before 003 is applied.
 4. Run `npm install` inside the project directory.
 5. Copy `.dev.vars.example` to `.dev.vars`, fill `DATABASE_URL` with the Neon connection string, keep LLM credentials blank unless desired.
 6. Run `npm run dev`. Open the local URL displayed by Wrangler (typically `http://localhost:8787`). Register; create an application; visit its `/s/...` public URL and `/s/.../manage` owner console.
@@ -101,7 +103,7 @@ npm run deploy
 
 ### Tests verified locally in package authoring environment
 
-13 Node.js unit tests passed and JS syntax checks passed. The authoring environment did **not** have Neon credentials, a Cloudflare account, or access to install npm dependencies; **live database, Worker deployment, browser, and payment end-to-end integration were not executed**.
+The registration investigation adds password-runtime, API, actual Worker and opt-in real PostgreSQL tests. See [REGISTRATION_DIAGNOSIS.md](docs/REGISTRATION_DIAGNOSIS.md) for evidence, commands, remaining production uncertainty and the password-work-factor tradeoff. `npm run check` runs automated tests and syntax checks. The PostgreSQL case is skipped without a disposable loopback `SOMAS_TEST_DATABASE_URL`; it is distinct from hosted Neon validation. Browser tests need a separately supplied `TEST_SITE_URL`.
 
 ## Production limitations (do not ignore)
 

@@ -1,5 +1,7 @@
 # SOMAS v2 — System Architecture
 
+The Root/Customer Mission slice now uses `src/somas-core.js:planEvolution` for both scopes. Root's mission is the SOMAS platform; each customer's mission comes from the saved application purpose. Root policies/examples/candidates live in separate tables, while customer policies remain in canonical `agents`. Existing typed-site edits still require owner approval. Mission plans do not execute code or deploy changes. See `ROOT_CUSTOMER_INTEGRATION_REVIEW.md` for migration 003, permission/ownership checks and local verification.
+
 ## Product thesis
 
 A customer describes business/software objectives and settings. The Root Manager provisions a public web application and a private Instance Manager with an Assistant and Virtual Customer. From inside that published site, the owner describes defects or improvements. The Instance Manager creates a task-specific team to investigate, implement, test and propose an approved deployment. The system supports four independent but coordinated changes: application software, agent intelligence, organization topology and customer-facing business workflows/content.

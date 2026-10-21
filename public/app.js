@@ -6,7 +6,7 @@ function toast(message,isError=false){const t=$('toast');t.textContent=message;t
 async function api(path,{method='GET',data}={}){
   const response=await fetch(path,{method,credentials:'same-origin',headers:{'content-type':'application/json','x-somas-request':'1'},body:data!==undefined?JSON.stringify(data):undefined});
   const body=await response.json().catch(()=>({error:'unexpected_server_response'}));
-  if(!response.ok)throw new Error(String(body.error||`Request failed: ${response.status}`));
+  if(!response.ok)throw new Error(String(body.error||`Request failed: ${response.status}`)+(body.requestId?` (reference: ${body.requestId})`:''));
   return body;
 }
 async function action(fn){try{await fn();}catch(e){toast(e.message.replaceAll('_',' '),true);}}

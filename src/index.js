@@ -6,6 +6,10 @@ import {prepareCandidate,validateTrainingLabel} from './learning.js';
 import {verifyPaddleSignature,paddleStatusToSomas,createPaddleCheckout} from './billing.js';
 import {cronEvolutionTick} from './research.js';
 import {readBoundedText} from './http.js';
+import {reportFailure} from './errors.js';
+import {candidateEvaluation,releasePolicy} from './policy-releases.js';
+import {permissionsFor} from './somas-core.js';
+import {ensureRootUnit,ensureCustomerUnit,rootAgents,unitPlans,proposeScopedEvolution,recordRootFeedback,prepareRootCandidate,promoteRootCandidate} from './somas-units.js';
 
 const securityHeaders={'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-frame-options':'DENY','cache-control':'no-store','content-security-policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"};
 function json(payload,status=200,headers={}){return new Response(JSON.stringify(payload),{status,headers:{'content-type':'application/json; charset=utf-8',...securityHeaders,...headers}});}
@@ -32,9 +36,15 @@ async function allowedSubscription(sql,user){
 }
 const routeId=/^[0-9a-f-]{36}$/i;
 const permittedSources=new Set(['developers.cloudflare.com','developer.mozilla.org','neon.com']);
-async function handle(request,env){
+async function handle(request,env,trace){
   const url=new URL(request.url),path=url.pathname,method=request.method;
   if(path==='/health')return json({ok:true,service:'SOMAS v2',databaseConfigured:!!env.DATABASE_URL});
+  if(path==='/api/admin/root/view' && method==='GET'){
+    const sql=database(env),user=await requireUser(sql,request);
+    must(env.ADMIN_USER_ID && user.id===env.ADMIN_USER_ID,'admin_required',403);
+    return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Root SOMAS</title><link rel="stylesheet" href="/style.css"></head><body><main class="content" style="max-width:900px;margin:auto"><div class="eyebrow">PLATFORM OPERATOR</div><h1>Root SOMAS — Platform Mission</h1><p>The Root Manager improves the SOMAS service. Customer Managers improve their own applications. Both share the same planning engine.</p><section class="card"><h2>Root evolution request</h2><form id="rootMissionForm"><label>Service improvement<textarea id="rootMessage" minlength="8" maxlength="2500" rows="4" required placeholder="Improve SOMAS project onboarding reliability and tests"></textarea></label><label>Change type<select id="rootChangeKind"><option value="software">Software</option><option value="intelligence">Intelligence</option><option value="organization">Organization</option><option value="business">Business operations</option></select></label><button class="primary" type="submit">Prepare scoped plan</button></form><pre id="rootResult"></pre></section><section class="card"><h2>Recent proposals</h2><div id="rootProposals"></div></section></main><script type="module" src="/root.js"></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"}});
+  }
+
   const inSiteManager=path.match(/^\/s\/([a-z0-9-]{1,70})\/manage$/);
   if(inSiteManager && method==='GET'){
     const sql=database(env);const project=await publicProject(sql,inSiteManager[1]);
@@ -47,6 +57,7 @@ async function handle(request,env){
     <header class="topnav"><div class="brand">◈ SOMAS <span class="brand-version">MANAGER</span></div><nav><a href="/s/${htmlEscape(project.slug)}">← Back to site</a> &nbsp; <a href="/?site=${htmlEscape(project.slug)}">Full dashboard ↗</a></nav></header>
     <main class="content" style="max-width:900px;margin:auto"><div class="eyebrow">OWNER-ONLY AI CONTROL PANEL</div><h1>${htmlEscape(project.title)}</h1><p class="muted">Assistant → Manager → Dynamically assembled specialists</p>
     <section class="card" id="somas-manager" data-project="${htmlEscape(project.id)}"><h2>Tell your SOMAS team what to improve</h2><form id="embeddedForm"><label>Change request<textarea id="embeddedRequest" required minlength="8" maxlength="2500" placeholder="Try: Change the title to a new name" rows="4"></textarea></label><button type="submit" class="primary">Send to Manager →</button></form><div id="embeddedResult" class="response hidden"></div></section>
+    <section class="card"><h2>Your SOMAS instance</h2><p class="muted" id="unitMission">Loading your mission...</p><p>Your application has its own Manager, Assistant and Virtual Customer, using the same SOMAS planning engine as the platform Root. Their permissions and neural weights remain independent.</p><form id="unitEvolutionForm"><label>What should your SOMAS team improve?<textarea id="unitEvolutionMessage" required minlength="8" maxlength="2500" rows="3" placeholder="Improve our reservation workflow and evaluate existing errors"></textarea></label><label>Improvement category<select id="unitEvolutionKind"><option value="software">Software</option><option value="intelligence">Intelligence</option><option value="organization">Organization</option><option value="business">Business operations</option></select></label><button type="submit" class="primary">Organize team and propose</button></form><div id="unitEvolutionResult" class="response hidden"></div><div id="unitEvolutionPlans"></div></section>
     <section class="card"><div class="section-head"><h2>Evolution proposals</h2><button id="embeddedRefresh" class="small-outline">Refresh</button></div><div id="embeddedProposals"></div></section><section class="card"><div class="section-head"><h2>Virtual Customer</h2><button id="embeddedAudit" class="small-outline">Run audit</button></div><div id="embeddedFindings"></div></section>
     </main><script type="module" src="/manage.js"></script></body></html>`;
     return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"}});
@@ -87,13 +98,17 @@ async function handle(request,env){
     return json({acknowledged:true,received:rows[0]?.received===1,applied:rows[0]?.applied===1});
   }
   must(checkMutationOrigin(request),'request_origin_not_allowed',403);
+  trace.stage='database_configuration';
   const sql=database(env);
 
   if(path==='/api/auth/register'&&method==='POST'){
     const p=await payload(request);
     const email=String(p.email||'').trim().toLowerCase();must(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&email.length<=180,'invalid_email');
+    trace.stage='registration_password_hash';
     const hashed=await hashPassword(p.password);
+    trace.stage='registration_user_workspace';
     let user;try{user=await createUser(sql,email,hashed);}catch(e){if(e.code==='23505')return error('email_already_registered',409);throw e;}
+    trace.stage='registration_session';
     const token=randomToken();await createSession(sql,user.id,await sha256(token));
     return json({user:{id:user.id,email:user.email},plan:'free'},201,{'set-cookie':cookieForSession(token,request.url)});
   }
@@ -132,6 +147,46 @@ async function handle(request,env){
     await sql`INSERT INTO audit_events(id,actor_id,project_id,action,metadata) VALUES (${uuid()},${user.id},${adminSuspend[1]},'platform_instance_suspension',${JSON.stringify({suspended:p.suspended,reason:String(p.reason||'').slice(0,200)})}::jsonb)`;
     return json({instance:rows[0]});
   }
+
+  // Root and customer SOMAS share the same planner, but not privileges or data.
+  const isAdmin=Boolean(env.ADMIN_USER_ID && user.id===env.ADMIN_USER_ID);
+  if(path==='/api/admin/root'&&method==='GET'){
+    must(isAdmin,'admin_required',403);
+    const unit=await ensureRootUnit(sql);
+    return json({unit,permissions:permissionsFor(unit),agents:await rootAgents(sql),proposals:await unitPlans(sql,unit,user.id)});
+  }
+  if(path==='/api/admin/root/evolution'&&method==='POST'){
+    must(isAdmin,'admin_required',403);
+    must(await reserveQuota(sql,user.id,'root_evolution_plans',30),'monthly_evolution_plans_exhausted',429);
+    const p=await payload(request);must(['software','intelligence','organization','business'].includes(p.changeKind||'software'),'invalid_evolution_kind');
+    const unit=await ensureRootUnit(sql);
+    const agents=await rootAgents(sql);
+    const managerPolicy=agents.find(a=>a.role==='manager')?.policy;
+    return json({proposal:await proposeScopedEvolution(sql,{unit,instruction:p.message,changeKind:p.changeKind,actorId:user.id,managerPolicy,target:p.target})},201);
+  }
+  const rootFeedback=path.match(/^\/api\/admin\/root\/agents\/([0-9a-f-]{36})\/feedback$/i);
+  if(rootFeedback&&method==='POST'){
+    must(isAdmin,'admin_required',403);
+    const p=await payload(request);await ensureRootUnit(sql);
+    return json(await recordRootFeedback(sql,rootFeedback[1],user.id,p.input,p.label),201);
+  }
+  const rootTraining=path.match(/^\/api\/admin\/root\/agents\/([0-9a-f-]{36})\/train$/i);
+  if(rootTraining&&method==='POST'){
+    must(isAdmin,'admin_required',403);
+    await ensureRootUnit(sql);
+    return json(await prepareRootCandidate(sql,rootTraining[1]));
+  }
+  const rootPromote=path.match(/^\/api\/admin\/root\/policies\/([0-9a-f-]{36})\/promote$/i);
+  if(rootPromote&&method==='POST'){
+    must(isAdmin,'admin_required',403);
+    return json(await promoteRootCandidate(sql,rootPromote[1],user.id));
+  }
+  const rootRollback=path.match(/^\/api\/admin\/root\/policies\/([0-9a-f-]{36})\/rollback$/i);
+  if(rootRollback&&method==='POST'){
+    must(isAdmin,'admin_required',403);
+    return json(await releasePolicy(sql,{scope:'root',candidateId:rootRollback[1],actorId:user.id,rollback:true}));
+  }
+
   if(path==='/api/me'&&method==='GET')return json({user,subscription:await getSubscription(sql,user.id),usage:await usageSummary(sql,user.id),billingConfigured:!!(env.PADDLE_API_KEY&&env.PADDLE_PRICE_ID&&env.PADDLE_WEBHOOK_SECRET),limits:{projects:3,changeRequestsPerMonth:100,aiRequestsPerMonth:Number(env.FREE_MONTHLY_AI_REQUESTS||30)}});
   if(path==='/api/projects'&&method==='GET')return json({projects:await listProjects(sql,user.id)});
   if(path==='/api/projects'&&method==='POST'){
@@ -140,6 +195,7 @@ async function handle(request,env){
     const spec=initialSpec(title,purpose,p.template||'business');
     const slug=`${slugify(title)}-${randomToken(3)}`;
     const result=await provisionProject(sql,user.id,{title,purpose,slug,spec});
+    // Project, policies and customer unit are initialized in the same transaction.
     return json({project:result,liveUrl:`${url.origin}/s/${slug}`},201);
   }
   const match=path.match(/^\/api\/projects\/([0-9a-f-]{36})(?:\/(.*))?$/i);
@@ -148,6 +204,20 @@ async function handle(request,env){
   const project=await requireProject(sql,user,projectId);
   if(!rest&&method==='GET')return json({project:{...project,workspace_id:undefined},agents:await projectAgents(sql,projectId),siteUrl:`${url.origin}/s/${project.slug}`});
   if(rest==='agents'&&method==='GET')return json({agents:await projectAgents(sql,projectId)});
+  if(rest==='unit'&&method==='GET'){
+    const unit=await ensureCustomerUnit(sql,project,user.id);
+    return json({unit,permissions:permissionsFor(unit),agents:await projectAgents(sql,projectId),proposals:await unitPlans(sql,unit,user.id)});
+  }
+  if(rest==='unit/evolution'&&method==='POST'){
+    await allowedSubscription(sql,user);must(!project.suspended,'instance_suspended',403);
+    must(await reserveQuota(sql,user.id,'evolution_plans',30),'monthly_evolution_plans_exhausted',429);
+    const p=await payload(request);must(['software','intelligence','organization','business'].includes(p.changeKind||'software'),'invalid_evolution_kind');
+    const unit=await ensureCustomerUnit(sql,project,user.id);
+    const agents=await projectAgents(sql,projectId);
+    const managerPolicy=agents.find(a=>a.role==='manager')?.policy;
+    return json({proposal:await proposeScopedEvolution(sql,{unit,instruction:p.message,changeKind:p.changeKind,actorId:user.id,managerPolicy,target:p.target})},201);
+  }
+
   if(rest==='proposals'&&method==='GET')return json({proposals:await listProposals(sql,projectId)});
   if(rest==='releases'&&method==='GET')return json({releases:await listReleases(sql,projectId)});
   if(rest==='findings'&&method==='GET')return json({findings:await listFindings(sql,projectId)});
@@ -234,7 +304,7 @@ async function handle(request,env){
   }
   if(rest==='learning'&&method==='GET'){
     const agents=await projectAgents(sql,projectId);
-    const candidates=await sql`SELECT pc.id,pc.agent_id,pc.base_version,pc.evaluation,pc.status,pc.created_at FROM policy_candidates pc JOIN agents a ON a.id=pc.agent_id WHERE a.project_id=${projectId} ORDER BY pc.created_at DESC LIMIT 20`;
+    const candidates=await sql`SELECT pc.id,pc.agent_id,pc.base_version,pc.evaluation-'rollbackPolicy' AS evaluation,pc.status,pc.created_at FROM policy_candidates pc JOIN agents a ON a.id=pc.agent_id WHERE a.project_id=${projectId} ORDER BY pc.created_at DESC LIMIT 20`;
     return json({agents:agents.filter(a=>a.is_core).map(a=>({id:a.id,role:a.role,policyVersion:a.policy?.version||1,verifiedSamples:a.policy?.samples||0})),candidates});
   }
   const feedback=rest.match(/^agents\/([0-9a-f-]{36})\/feedback$/i);
@@ -254,38 +324,37 @@ async function handle(request,env){
     const examples=await sql`SELECT input,label FROM learning_examples WHERE agent_id=${a.id} ORDER BY created_at ASC LIMIT 500`;
     const candidate=prepareCandidate(a.policy,examples);
     const candidateId=uuid();
-    await sql`INSERT INTO policy_candidates(id,agent_id,base_version,proposed_policy,evaluation) VALUES (${candidateId},${a.id},${a.policy.version},${JSON.stringify(candidate.policy)}::jsonb,${JSON.stringify(candidate.evaluation)}::jsonb)`;
+    await sql`INSERT INTO policy_candidates(id,agent_id,base_version,proposed_policy,evaluation) VALUES (${candidateId},${a.id},${a.policy.version},${JSON.stringify(candidate.policy)}::jsonb,${JSON.stringify(candidateEvaluation(candidate,a.policy))}::jsonb)`;
     return json({candidateId,evaluation:candidate.evaluation,activePolicyUnchanged:true});
   }
   const promote=rest.match(/^policies\/([0-9a-f-]{36})\/promote$/i);
   if(promote&&method==='POST'){
     await allowedSubscription(sql,user);
-    const rows=await sql`WITH selected AS (
-       UPDATE policy_candidates pc SET status='promoted'
-       FROM agents a WHERE pc.id=${promote[1]} AND pc.agent_id=a.id AND a.project_id=${projectId}
-         AND pc.status='candidate' AND pc.base_version=(a.policy->>'version')::integer
-         AND (pc.evaluation->>'eligible')::boolean=true
-       RETURNING pc.agent_id,pc.proposed_policy
-      ), activated AS (
-       UPDATE agents a SET policy=selected.proposed_policy FROM selected WHERE a.id=selected.agent_id
-       RETURNING a.id,a.policy
-      ) SELECT id,policy FROM activated`;
-    must(rows.length,'policy_not_promotable',409);
-    return json({promoted:true,agentId:rows[0].id,activeVersion:rows[0].policy.version});
+    return json(await releasePolicy(sql,{scope:'customer',candidateId:promote[1],projectId,actorId:user.id}));
+  }
+  const rollbackPolicy=rest.match(/^policies\/([0-9a-f-]{36})\/rollback$/i);
+  if(rollbackPolicy&&method==='POST'){
+    await allowedSubscription(sql,user);
+    return json(await releasePolicy(sql,{scope:'customer',candidateId:rollbackPolicy[1],projectId,actorId:user.id,rollback:true}));
   }
   return error('route_not_found',404);
 }
 export default {
   async scheduled(event,env,ctx){
-    ctx.waitUntil(cronEvolutionTick(env).catch(e=>console.error('Scheduled work failed:',e.message)));
+    ctx.waitUntil(cronEvolutionTick(env).catch(e=>reportFailure(e,'scheduled_work')));
   },
   async fetch(request,env){
-    try{return await handle(request,env);}catch(e){
+    const trace={stage:'request'};
+    try{return await handle(request,env,trace);}catch(e){
       if(e.status)return error(e.message,e.status);
+      if(e.message==='cross_scope_evolution_forbidden')return error(e.message,403);
+      if(['root_agent_not_found','customer_unit_not_found'].includes(e.message))return error(e.message,404);
+      if(['root_policy_not_promotable','policy_not_promotable'].includes(e.message))return error(e.message,409);
+      if(['invalid_evolution_kind','invalid_training_label'].includes(e.message))return error(e.message,400);
       if(['description_must_be_8_to_2500_chars','password_must_be_12_to_128_chars','title_too_short','invalid_template','too_many_sections','invalid_site_spec','at_least_5_verified_examples_required'].includes(e.message))return error(e.message,400);
       if(e.code==='23505')return error('duplicate_record',409);
-      console.error('SOMAS server failure',e.message);
-      return error('internal_server_error',500);
+      const failure=reportFailure(e,trace.stage);
+      return json({error:failure.code,requestId:failure.requestId},failure.status,{'x-request-id':failure.requestId});
     }
   }
 };

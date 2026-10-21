@@ -135,7 +135,17 @@ Notation: **Implemented** = present in this new codebase; **Interface** = must b
 | `deleteTenantData(workspace,actor)` | Authorized request → delayed deletion job | Backups, retention laws, idempotence, support appeals | Interface |
 | `reconcileInstanceHeartbeat(project)` | Health signal → status | Detect outage while preserving customer data | Interface |
 
+## Root/Customer Mission integration contracts
+
+Both scopes call `planEvolution(unit,instruction,{changeKind,target,managerPolicy})`. Descriptors and policies come from authenticated server context, never caller-supplied unit/authority fields. Targets are fixed to `somas_platform` or `customer_application`; cross-scope claims are 403. Plans remain unexecuted and require human approval.
+
+`ensureRootUnit` is admin/server-internal; `ensureCustomerUnit` additionally checks the actor's workspace ownership. `unitPlans` scopes customer reads to that owner. `proposeScopedEvolution` atomically stores a proposal and only missing specialists, preserving canonical policies. `recordRootFeedback` stores operator labels without changing active weights; `prepareRootCandidate` uses the shared holdout evaluator; `promoteRootCandidate` locks the Root agent and checks evaluation/base version before activation. Root routes require session plus `ADMIN_USER_ID`, independently of customer ownership. See `ROOT_CUSTOMER_INTEGRATION_REVIEW.md` for migration backstops, negative tests and limits.
+
+`candidateEvaluation` records an independent rollback snapshot for new candidates in either scope. `releasePolicy` is the shared locked promotion/rollback gate: explicit authorized action, eligible candidate/base version, snapshot required, monotonic versions and atomic audit records. Old candidates without snapshots require retraining and are not rewritten. Latest-promotion rollback is implemented; arbitrary historical policy registry/rollback remains a later interface.
+
 ## Frontend behavior contracts
+
+Registration diagnostics supplement the authentication contracts: `hashPassword` uses a 100,000 per-call PBKDF2 work factor for hosted Worker compatibility; existing hashes retain their stored factor. `reportFailure` emits only static classifications, stage and random request ID. `scripts/check-database.mjs:checkDatabase` performs a read-only connection/registration-column preflight and never migrates. See `REGISTRATION_DIAGNOSIS.md` for tradeoffs and production evidence still required.
 
 | Screen | Input → action → expected output | Failure behavior |
 |---|---|---|
