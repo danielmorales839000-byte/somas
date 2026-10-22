@@ -1,5 +1,10 @@
 # SOMAS v2 — Free-first executable alpha
 
+**Development audit/runtime update:** see [SOMAS_V2_RELEASE_REVIEW.md](docs/SOMAS_V2_RELEASE_REVIEW.md) for integrated Manager conversation, mission jobs, Live Organization, Root operations, scoped browser runner, independent application packages, migration 004 and exact test evidence. This update is not production-deployed. The live source/schema mismatch and unavailable coding/hosting providers remain blockers to full product acceptance. Earlier alpha descriptions below refer to the base implementation unless superseded by that review.
+
+Development verification: `npm ci`, `npm run check`, `npm run test:sql`, `npm run test:postgres` (non-root native PostgreSQL), `npx playwright install chromium`, `npm run test:runtime-browser`. All runtime integration uses disposable data. Do not point these tests at production.
+
+
 Root/Customer Mission integration is prepared locally: see [ROOT_CUSTOMER_INTEGRATION_REVIEW.md](docs/ROOT_CUSTOMER_INTEGRATION_REVIEW.md) for shared-engine boundaries, migration 003, tests and approval gates. Root plans improve SOMAS; customer plans improve only the owner's application. Plans do not execute or deploy themselves.
 
 > **A completely new codebase.** Cloudflare Worker + Neon PostgreSQL. User-created sites include a private Manager/Assistant panel and independently persisted agents. This alpha is a **constrained vertical slice**, not an arbitrary, autonomous full-stack coding platform.

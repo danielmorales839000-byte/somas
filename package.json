@@ -9,14 +9,20 @@
     "test": "node --test tests/*.test.js",
     "diagnose:database": "node scripts/check-database.mjs",
     "test:browser": "playwright test",
-    "check": "npm test && node --check src/index.js && node --check src/agents.js && node --check src/auth.js && node --check src/database.js && node --check public/app.js && node --check src/research.js && node --check src/billing.js && node --check src/gateway.js && node --check scripts/run-virtual-customer.mjs && node --check src/http.js && node --check public/manage.js && node --check src/errors.js && node --check scripts/check-database.mjs && node --check src/somas-core.js && node --check src/somas-units.js && node --check public/root.js && node --check src/policy-releases.js",
-    "virtual-customer": "node scripts/run-virtual-customer.mjs"
+    "check": "npm test && node --check src/index.js && node --check src/agents.js && node --check src/auth.js && node --check src/database.js && node --check public/app.js && node --check src/research.js && node --check src/billing.js && node --check src/gateway.js && node --check scripts/run-virtual-customer.mjs && node --check src/http.js && node --check public/manage.js && node --check src/errors.js && node --check scripts/check-database.mjs && node --check src/somas-core.js && node --check src/somas-units.js && node --check public/root.js && node --check src/policy-releases.js && node --check src/mission-runtime.js && node --check src/application-package.js && node --check public/operations-ui.js && node --check public/operations-model.js && node --check scripts/run-browser-agent.mjs && node --check scripts/unpack-application.mjs && node --check src/mission-schema.js",
+    "virtual-customer": "node scripts/run-virtual-customer.mjs",
+    "test:postgres": "node scripts/test-postgres.mjs",
+    "test:sql": "node scripts/test-sql.mjs",
+    "browser-agent": "node scripts/run-browser-agent.mjs",
+    "test:runtime-browser": "playwright test --config=playwright.runtime.config.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@playwright/test": "^1.55.0",
+    "embedded-postgres": "^18.4.0-beta.17",
     "esbuild": "^0.28.2",
     "miniflare": "5.20261019.1-beta",
     "pg": "^8.23.1",

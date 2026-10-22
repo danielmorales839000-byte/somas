@@ -1,5 +1,7 @@
 import {neon} from '@neondatabase/serverless';
 import {newPolicy,CORE_ROLES} from './agents.js';
+import {missionBootstrapStatements} from './mission-schema.js';
+import {customerDescriptor} from './somas-core.js';
 import {rootUnitStatements,customerUnitStatements} from './somas-units.js';
 const id=()=>crypto.randomUUID();
 export function database(env){
@@ -8,7 +10,7 @@ export function database(env){
 }
 export const uuid=id;
 export async function getUserFromSession(sql,hash){
-  const rows=await sql`SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${hash} AND s.expires_at>now() LIMIT 1`;
+  const rows=await sql`SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${hash} AND s.expires_at>now() AND COALESCE(to_jsonb(u)->>'account_status','active')='active' LIMIT 1`;
   return rows[0]||null;
 }
 export async function createUser(sql,email,passwordHash){
@@ -35,7 +37,7 @@ export async function ownedProject(sql,userId,projectId){
   return rows[0]||null;
 }
 export async function publicProject(sql,slug){
-  const rows=await sql`SELECT p.id,p.slug,p.title,p.spec,p.suspended FROM projects p WHERE p.slug=${slug} LIMIT 1`;
+  const rows=await sql`SELECT p.id,p.slug,p.title,p.spec,p.suspended,p.active_release FROM projects p WHERE p.slug=${slug} LIMIT 1`;
   return rows[0]||null;
 }
 export async function provisionProject(sql,userId,{title,purpose,slug,spec}){
@@ -53,7 +55,8 @@ export async function provisionProject(sql,userId,{title,purpose,slug,spec}){
   for(const agent of agents)inserts.push(sql`INSERT INTO agents (id,project_id,role,name,policy,is_core) VALUES (${agent.id},${pid},${agent.role},${agent.role.replace('_',' ')},${JSON.stringify(agent.policy)}::jsonb,true)`);
   inserts.push(sql`INSERT INTO audit_events (id,actor_id,project_id,action) VALUES (${id()},${userId},${pid},'instance_provisioned')`);
   inserts.push(...customerUnitStatements(sql,{id:pid,workspace_id:w[0].id,purpose}));
-  await sql.transaction(inserts);
+  inserts.push(...missionBootstrapStatements(sql,customerDescriptor({id:pid,workspace_id:w[0].id,purpose})));
+  try{await sql.transaction(inserts);}catch(e){if(e.code==='P0001')throw Object.assign(new Error('free_project_limit_3'),{status:409});throw e;}
   return {id:pid,slug,title,purpose,coreAgents:agents.map(({id,role})=>({id,role}))};
 }
 export async function projectAgents(sql,projectId){
@@ -71,11 +74,12 @@ export async function usageSummary(sql,userId){
   const month=new Date().toISOString().slice(0,7);
   return await sql`SELECT kind,used FROM usage_counters WHERE user_id=${userId} AND month=${month}`;
 }
-export async function createTaskWithProposal(sql,userId,projectId,text,team,revision){
+export async function createTaskWithProposal(sql,userId,projectId,text,team,revision,baseRelease){
+  if(!Number.isInteger(baseRelease)||baseRelease<1)throw new Error('source_release_required');
   const taskId=id(), proposalId=id(); const kind=revision.supported?'structured_site_update':'needs_engineering';
   const statements=[
     sql`INSERT INTO tasks (id,project_id,submitted_by,prompt,category,team,status) VALUES (${taskId},${projectId},${userId},${text},${team.category},${JSON.stringify(team)}::jsonb,${revision.supported?'proposed':'needs_engineering'})`,
-    sql`INSERT INTO proposals (id,project_id,task_id,kind,proposed_spec,reason) VALUES (${proposalId},${projectId},${taskId},${kind},${revision.nextSpec?JSON.stringify(revision.nextSpec):null}::jsonb,${revision.reason})`
+    sql`INSERT INTO proposals (id,project_id,task_id,kind,proposed_spec,reason,base_release) VALUES (${proposalId},${projectId},${taskId},${kind},${revision.nextSpec?JSON.stringify(revision.nextSpec):null}::jsonb,${revision.reason},${baseRelease})`
   ];
   for(const role of team.specialists)statements.push(sql`INSERT INTO agents (id,project_id,role,name,policy,is_core) VALUES (${id()},${projectId},${role},${role.replaceAll('_',' ')},${JSON.stringify(newPolicy(role))}::jsonb,false) ON CONFLICT (project_id,role) DO NOTHING`);
   await sql.transaction(statements);
@@ -86,8 +90,10 @@ export async function listProposals(sql,projectId){
 }
 export async function approveProposal(sql,projectId,proposalId,actorId){
   const releaseId=id();
-  const rows=await sql`WITH accepted AS (
-     UPDATE proposals SET status='approved' WHERE id=${proposalId} AND project_id=${projectId} AND status='pending' AND kind='structured_site_update' AND EXISTS(SELECT 1 FROM projects WHERE id=${projectId} AND suspended=false) RETURNING proposed_spec,task_id
+  const results=await sql.transaction([
+    sql`SELECT id FROM projects WHERE id=${projectId} FOR UPDATE`,
+    sql`WITH accepted AS (
+     UPDATE proposals SET status='approved' WHERE id=${proposalId} AND project_id=${projectId} AND status='pending' AND kind='structured_site_update' AND base_release=(SELECT active_release FROM projects WHERE id=${projectId}) AND EXISTS(SELECT 1 FROM projects WHERE id=${projectId} AND suspended=false) RETURNING proposed_spec,task_id
     ), deployed AS (
       UPDATE projects SET spec=(SELECT proposed_spec FROM accepted),active_release=active_release+1
       WHERE id=${projectId} AND suspended=false AND EXISTS(SELECT 1 FROM accepted)
@@ -96,9 +102,16 @@ export async function approveProposal(sql,projectId,proposalId,actorId){
       INSERT INTO releases (id,project_id,version,spec,source) SELECT ${releaseId},id,active_release,spec,'approved_proposal' FROM deployed RETURNING version
     ), task_update AS (
       UPDATE tasks SET status='released' WHERE id IN (SELECT task_id FROM accepted) AND EXISTS(SELECT 1 FROM deployed) RETURNING id
-    ) SELECT version FROM history`;
+    ), runtime_event AS (
+      INSERT INTO somas_runtime_events(unit_id,event_type,actor_role,recipient_role,status,summary,evidence)
+      SELECT 'customer-'||id,'release_recorded','owner','manager','completed','Approved content release recorded',jsonb_build_object('version',active_release,'method','typed_spec_release') FROM deployed
+    ), audit AS (
+      INSERT INTO audit_events(id,actor_id,project_id,action,metadata)
+      SELECT ${id()},${actorId},id,'release_approved',jsonb_build_object('version',active_release) FROM deployed
+    ) SELECT version FROM history`
+  ]);
+  const rows=results[1];
   if(!rows.length)throw new Error('proposal_not_approvable');
-  await sql`INSERT INTO audit_events (id,actor_id,project_id,action,metadata) VALUES (${id()},${actorId},${projectId},'release_approved',${JSON.stringify({version:rows[0].version})}::jsonb)`;
   return {version:rows[0].version};
 }
 export async function listReleases(sql,projectId){return await sql`SELECT id,version,source,created_at FROM releases WHERE project_id=${projectId} ORDER BY version DESC LIMIT 30`;}
@@ -107,9 +120,11 @@ export async function rollbackRelease(sql,projectId,oldVersion,actorId){
   const rows=await sql`WITH source AS (SELECT spec FROM releases WHERE project_id=${projectId} AND version=${oldVersion}),
     activated AS (UPDATE projects SET spec=(SELECT spec FROM source),active_release=active_release+1 WHERE id=${projectId} AND suspended=false AND EXISTS(SELECT 1 FROM source) RETURNING id,active_release,spec),
     logged AS (INSERT INTO releases(id,project_id,version,spec,source) SELECT ${id()},id,active_release,spec,${releaseSource} FROM activated RETURNING version)
+    , runtime_event AS (INSERT INTO somas_runtime_events(unit_id,event_type,actor_role,status,summary,evidence)
+      SELECT 'customer-'||id,'release_recorded','owner','completed','Approved content rollback recorded',jsonb_build_object('version',active_release,'sourceVersion',${oldVersion}::integer) FROM activated),
+    audit AS (INSERT INTO audit_events(id,actor_id,project_id,action) SELECT ${id()},${actorId},id,'rollback_approved' FROM activated)
     SELECT version FROM logged`;
   if(!rows.length)throw new Error('release_not_found');
-  await sql`INSERT INTO audit_events(id,actor_id,project_id,action) VALUES (${id()},${actorId},${projectId},'rollback_approved')`;
   return {version:rows[0].version};
 }
 export async function recordFindings(sql,projectId,items,method='static_heuristic'){

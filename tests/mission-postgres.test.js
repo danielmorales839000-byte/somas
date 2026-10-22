@@ -33,7 +33,7 @@ test('mission migration, admin/tenant boundaries, independent policies and promo
     assert.equal((await send('/api/projects',{title:'New site',purpose:'Improve our customer booking application'},alice.cookie)).status,503);
     assert.equal((await pool.query('SELECT count(*)::int n FROM projects')).rows[0].n,1);
     assert.equal((await send('/api/me',undefined,alice.cookie)).status,200);
-    await migrate('003_recursive_units.sql');await migrate('003_recursive_units.sql');
+    await migrate('003_recursive_units.sql');await migrate('003_recursive_units.sql');await migrate('004_mission_runtime.sql');
     assert.deepEqual((await pool.query('SELECT id,password_hash FROM users ORDER BY id')).rows,snapshot);
     assert.deepEqual((await pool.query('SELECT policy FROM agents WHERE id=$1',[legacyAgent])).rows[0].policy,legacyPolicy);
     assert.equal((await send(`/api/projects/${legacyId}/unit`,undefined,alice.cookie)).status,200);

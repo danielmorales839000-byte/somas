@@ -24,9 +24,9 @@ test('real PostgreSQL migrations, auth, ownership, project agents, management an
   try{
     await admin.query(`CREATE DATABASE "${name}"`);databaseCreated=true;
     await client.connect();
-    for(const file of ['001_initial.sql','002_operations.sql','003_recursive_units.sql'])await client.query(await readFile('db/'+file,'utf8'));
+    for(const file of ['001_initial.sql','002_operations.sql','003_recursive_units.sql','004_mission_runtime.sql'])await client.query(await readFile('db/'+file,'utf8'));
     // Reapplying the current idempotent scripts must preserve existing tables.
-    for(const file of ['001_initial.sql','002_operations.sql','003_recursive_units.sql'])await client.query(await readFile('db/'+file,'utf8'));
+    for(const file of ['001_initial.sql','002_operations.sql','003_recursive_units.sql','004_mission_runtime.sql'])await client.query(await readFile('db/'+file,'utf8'));
     neonConfig.fetchFunction=async (_target,options)=>{
       const body=JSON.parse(options.body),batch=!!body.queries;
       try{
@@ -35,7 +35,7 @@ test('real PostgreSQL migrations, auth, ownership, project agents, management an
         for(const {query,params} of body.queries||[body]){
           const result=await client.query({text:query,values:params,rowMode:'array'});
           results.push({fields:result.fields.map(f=>({name:f.name,dataTypeID:f.dataTypeID})),rowCount:result.rowCount,
-            rows:result.rows.map(row=>row.map(v=>v===null?null:v instanceof Date?v.toISOString():typeof v==='object'?JSON.stringify(v):String(v)))});
+            rows:result.rows.map(row=>row.map(v=>v===null?null:v instanceof Date?v.toISOString().replace('T',' ').replace('Z','+00'):typeof v==='object'?JSON.stringify(v):String(v)))});
         }
         if(batch)await client.query('COMMIT');
         return Response.json(batch?{results}:results[0]);

@@ -1,7 +1,10 @@
+import {mountOperations,renderConversation} from './operations-ui.js';
 const $=id=>document.getElementById(id);
 const state={user:null,projects:[],project:null,authMode:'register'};
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let toastTimer;
+let toastTimer,operationsView;
+const runtimeBase=()=>`/api/projects/${state.project.id}/operations`;
+async function refreshConversation(){if(state.project)await renderConversation($('conversation'),runtimeBase());}
 function toast(message,isError=false){const t=$('toast');t.textContent=message;t.classList.toggle('error',isError);t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),5500);}
 async function api(path,{method='GET',data}={}){
   const response=await fetch(path,{method,credentials:'same-origin',headers:{'content-type':'application/json','x-somas-request':'1'},body:data!==undefined?JSON.stringify(data):undefined});
@@ -10,19 +13,22 @@ async function api(path,{method='GET',data}={}){
   return body;
 }
 async function action(fn){try{await fn();}catch(e){toast(e.message.replaceAll('_',' '),true);}}
-function setLoginMode(login){state.authMode=login?'login':'register';$('authTitle').textContent=login?'Welcome back':'Create your account';$('authSubmit').textContent=login?'Sign in →':'Create free account →';$('authToggle').textContent=login?'Create account':'Sign in';$('authPassword').autocomplete=login?'current-password':'new-password';}
+function setLoginMode(login){state.authMode=login?'login':'register';$('authTitle').textContent=login?'Welcome back':'Create your account';$('authSubmit').textContent=login?'Sign in →':'Create free account →';$('authToggle').textContent=login?'Create account':'Sign in';$('authToggleWrap').firstChild.textContent=login?'New to SOMAS? ':'Already have an account? ';$('authPassword').autocomplete=login?'current-password':'new-password';}
 function showDashboard(show){$('authArea').classList.toggle('hidden',show);$('dashboard').classList.toggle('hidden',!show);$('logout').classList.toggle('hidden',!show);}
 function activatePage(which){for(const name of ['overview','detail','usage','about']){$(name+'Page').classList.toggle('hidden',name!==which);}
   $('navProjects').classList.toggle('active',['overview','detail'].includes(which));$('navUsage').classList.toggle('active',which==='usage');$('navAbout').classList.toggle('active',which==='about');}
-async function loadSession(){try{const result=await api('/api/me');state.user=result.user;showDashboard(true);$('accountEmail').textContent=result.user.email;await loadProjects();}catch{showDashboard(false);}}
+async function loadSession(){try{const result=await api('/api/me');state.user=result.user;showDashboard(true);$('navRoot').classList.toggle('hidden',!result.isAdmin);$('accountEmail').textContent=result.user.email;await loadProjects();}catch{showDashboard(false);}}
 async function loadProjects(){const result=await api('/api/projects');state.projects=result.projects;$('projectCount').textContent=String(result.projects.length);
-  $('projectsList').innerHTML=result.projects.length?result.projects.map(p=>`<article class="project-card" data-project="${escapeHtml(p.id)}"><span class="project-icon">◈</span><span class="pill" style="float:right">${p.suspended?'Suspended':'Live'}</span><h3>${escapeHtml(p.title)}</h3><p class="muted">${escapeHtml(p.purpose.slice(0,105))}</p><div class="site">/s/${escapeHtml(p.slug)}</div><p class="hint">Release v${Number(p.active_release)} · Open dashboard →</p></article>`).join(''):'<div class="empty">No applications yet. Create the first SOMAS-powered site.</div>';
-  document.querySelectorAll('[data-project]').forEach(el=>el.addEventListener('click',()=>action(()=>openProject(el.dataset.project))));
+  $('projectsList').innerHTML=result.projects.length?result.projects.map(p=>`<article class="project-card" role="button" tabindex="0" data-project="${escapeHtml(p.id)}"><span class="project-icon">◈</span><span class="pill" style="float:right">${p.suspended?'Suspended':'Content preview'}</span><h3>${escapeHtml(p.title)}</h3><p class="muted">${escapeHtml(p.purpose.slice(0,105))}</p><div class="site">/s/${escapeHtml(p.slug)}</div><p class="hint">Release v${Number(p.active_release)} · Open dashboard →</p></article>`).join(''):'<div class="empty">No applications yet. Create the first SOMAS-powered site.</div>';
+  document.querySelectorAll('[data-project]').forEach(el=>{el.addEventListener('click',()=>action(()=>openProject(el.dataset.project)));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action(()=>openProject(el.dataset.project));}});});
   const querySlug=new URLSearchParams(location.search).get('site');if(querySlug){const matching=state.projects.find(p=>p.slug===querySlug);if(matching){history.replaceState(null,'','/');await openProject(matching.id);return;}}
   activatePage('overview');
 }
-async function openProject(id){const res=await api(`/api/projects/${id}`);state.project=res.project;$('detailTitle').textContent=res.project.title;$('detailPurpose').textContent=res.project.purpose;$('siteLink').href=res.siteUrl;
-  activatePage('detail');activateTab('assistant');await refreshProjectDetails();}
+async function openProject(id){operationsView?.destroy();const res=await api(`/api/projects/${id}`);state.project=res.project;$('detailTitle').textContent=res.project.title;$('detailPurpose').textContent=res.project.purpose;$('siteLink').href=res.siteUrl;
+  $('chatObjective').textContent=res.project.purpose;
+  activatePage('detail');activateTab('assistant');
+  operationsView=mountOperations({element:$('liveOperations'),base:runtimeBase(),agents:res.agents,getAgents:async()=>(await api(`/api/projects/${id}/agents`)).agents,onError:message=>toast(message.replaceAll('_',' '),true)});
+  await refreshProjectDetails();await refreshConversation();}
 function activateTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('selected',t.dataset.tab===tab));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('hidden',p.id!==`tab-${tab}`));}
 async function refreshProjectDetails(){if(!state.project)return;const id=state.project.id;
   const [p,a,f,r]=await Promise.all([api(`/api/projects/${id}/proposals`),api(`/api/projects/${id}/agents`),api(`/api/projects/${id}/findings`),api(`/api/projects/${id}/releases`)]);
@@ -49,15 +55,16 @@ function renderReleases(items){$('releasesList').innerHTML=items.map((r,i)=>`<ar
 }
 $('authToggle').addEventListener('click',()=>setLoginMode(state.authMode!=='login'));
 $('authForm').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const data={email:$('authEmail').value,password:$('authPassword').value};await api(`/api/auth/${state.authMode}`,{method:'POST',data});$('authPassword').value='';await loadSession();toast('Welcome to SOMAS');});});
-$('logout').addEventListener('click',()=>action(async()=>{await api('/api/auth/logout',{method:'POST',data:{}});state.user=null;state.project=null;showDashboard(false);}));
+$('logout').addEventListener('click',()=>action(async()=>{await api('/api/auth/logout',{method:'POST',data:{}});operationsView?.destroy();state.user=null;state.project=null;showDashboard(false);}));
 $('newProjectButton').addEventListener('click',()=>$('createProject').classList.remove('hidden'));
 $('closeProject').addEventListener('click',()=>$('createProject').classList.add('hidden'));
-$('createProjectForm').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const res=await api('/api/projects',{method:'POST',data:{title:$('projectTitle').value,purpose:$('projectPurpose').value,template:$('projectTemplate').value}});$('createProject').classList.add('hidden');$('createProjectForm').reset();await loadProjects();await openProject(res.project.id);toast('Your SOMAS instance is live');});});
-$('backToProjects').addEventListener('click',()=>activatePage('overview'));
-$('navProjects').addEventListener('click',()=>activatePage('overview'));
+$('createProjectForm').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const res=await api('/api/projects',{method:'POST',data:{title:$('projectTitle').value,purpose:$('projectPurpose').value,template:$('projectTemplate').value}});$('createProject').classList.add('hidden');$('createProjectForm').reset();await loadProjects();await openProject(res.project.id);toast('Content preview created; mission assessment queued');});});
+$('backToProjects').addEventListener('click',()=>{operationsView?.destroy();activatePage('overview');});
+$('showOrganization').addEventListener('click',e=>{e.preventDefault();activateTab('operations');operationsView?.refresh();});
+$('navProjects').addEventListener('click',()=>{operationsView?.destroy();activatePage('overview');});
 $('navAbout').addEventListener('click',()=>activatePage('about'));
 $('navUsage').addEventListener('click',()=>action(async()=>{const data=await api('/api/me');const usages=Object.fromEntries(data.usage.map(u=>[u.kind,u.used]));$('usageDetails').innerHTML=`<p>Current status: <b>${escapeHtml(data.subscription?.status||'unknown')}</b></p><p>Projects: ${state.projects.length} / ${data.limits.projects}</p><p>Manager requests: ${Number(usages.requests||0)} / ${data.limits.changeRequestsPerMonth}</p><p>AI gateway requests: ${Number(usages.llm||0)} / ${data.limits.aiRequestsPerMonth}</p><p>Virtual Customer audits: ${Number(usages.audits||0)} / 30</p>${data.billingConfigured?'<button id=\"upgradePlan\" class=\"primary small\">Upgrade with Paddle checkout</button>':'<p class=\"hint\">Monthly payment checkout is not configured on this installation.</p>'}`;if(data.billingConfigured){$('upgradePlan').onclick=()=>action(async()=>{const r=await api('/api/billing/checkout',{method:'POST',data:{}});if(!confirm('Continue to the payment provider to review subscription terms?'))return;location.href=r.checkoutUrl;});}activatePage('usage');}));
 document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{activateTab(tab.dataset.tab);if(tab.dataset.tab==='proposals'||tab.dataset.tab==='audit'||tab.dataset.tab==='releases')action(refreshProjectDetails);}));
-$('requestForm').addEventListener('submit',e=>{e.preventDefault();action(async()=>{const result=await api(`/api/projects/${state.project.id}/requests`,{method:'POST',data:{message:$('requestMessage').value,useAi:$('useAI').checked}});$('assistantAnswer').textContent=`Assistant: ${result.assistant}\n\nManager team: ${result.task.team.specialists.join(', ').replaceAll('_',' ')}\nStatus: ${result.task.kind}`;$('assistantAnswer').classList.remove('hidden');$('requestMessage').value='';await refreshProjectDetails();toast(result.preview?'A proposal is ready for owner approval':'Request recorded for engineering');});});
+$('requestForm').addEventListener('submit',e=>{e.preventDefault();const button=e.target.querySelector('button[type=submit]');if(button.disabled)return;button.disabled=true;action(async()=>{const result=await api(`/api/projects/${state.project.id}/requests`,{method:'POST',data:{message:$('requestMessage').value,useAi:$('useAI').checked}});$('assistantAnswer').classList.add('hidden');$('requestMessage').value='';await refreshProjectDetails();await refreshConversation();await operationsView?.refresh();toast(result.preview?'A proposal is ready for owner approval':'Request recorded for engineering');}).finally(()=>{button.disabled=false;});});
 $('auditButton').addEventListener('click',()=>action(async()=>{const r=await api(`/api/projects/${state.project.id}/audit`,{method:'POST',data:{}});toast(`${r.findings.length} heuristic findings recorded. No browser navigation performed.`);await refreshProjectDetails();}));
 loadSession();

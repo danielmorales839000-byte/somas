@@ -8,6 +8,7 @@ import {cronEvolutionTick} from './research.js';
 import {readBoundedText} from './http.js';
 import {reportFailure} from './errors.js';
 import {candidateEvaluation,releasePolicy} from './policy-releases.js';
+import {ensureMission,scheduleAssessment,operations,recordConversation,configureMission,runLocalJobs,missionTick,claimJob,heartbeat,issueBrowserToken,completeBrowserJob} from './mission-runtime.js';
 import {permissionsFor} from './somas-core.js';
 import {ensureRootUnit,ensureCustomerUnit,rootAgents,unitPlans,proposeScopedEvolution,recordRootFeedback,prepareRootCandidate,promoteRootCandidate} from './somas-units.js';
 
@@ -20,7 +21,7 @@ async function payload(request){
   const len=Number(request.headers.get('content-length')||0);
   must(len<=12000,'payload_too_large',413);
   must(request.headers.get('content-type')?.includes('application/json'),'json_content_type_required',415);
-  const text=await request.text();must(text.length<=12000,'payload_too_large',413);
+  let text;try{text=await readBoundedText(request,12000);}catch(e){if(e.message==='external_source_too_large')throw Object.assign(new Error('payload_too_large'),{status:413});throw e;}
   let obj;try{obj=JSON.parse(text);}catch{throw Object.assign(new Error('invalid_json'),{status:400});}
   must(obj && typeof obj==='object' && !Array.isArray(obj),'json_object_required');return obj;
 }
@@ -42,7 +43,7 @@ async function handle(request,env,trace){
   if(path==='/api/admin/root/view' && method==='GET'){
     const sql=database(env),user=await requireUser(sql,request);
     must(env.ADMIN_USER_ID && user.id===env.ADMIN_USER_ID,'admin_required',403);
-    return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Root SOMAS</title><link rel="stylesheet" href="/style.css"></head><body><main class="content" style="max-width:900px;margin:auto"><div class="eyebrow">PLATFORM OPERATOR</div><h1>Root SOMAS — Platform Mission</h1><p>The Root Manager improves the SOMAS service. Customer Managers improve their own applications. Both share the same planning engine.</p><section class="card"><h2>Root evolution request</h2><form id="rootMissionForm"><label>Service improvement<textarea id="rootMessage" minlength="8" maxlength="2500" rows="4" required placeholder="Improve SOMAS project onboarding reliability and tests"></textarea></label><label>Change type<select id="rootChangeKind"><option value="software">Software</option><option value="intelligence">Intelligence</option><option value="organization">Organization</option><option value="business">Business operations</option></select></label><button class="primary" type="submit">Prepare scoped plan</button></form><pre id="rootResult"></pre></section><section class="card"><h2>Recent proposals</h2><div id="rootProposals"></div></section></main><script type="module" src="/root.js"></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"}});
+    return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Root SOMAS</title><link rel="stylesheet" href="/style.css"></head><body><main class="content" style="max-width:1450px;margin:auto"><div class="eyebrow">PLATFORM OPERATOR</div><h1>Root SOMAS — Platform Mission</h1><div id="rootOverview" class="card"></div><div id="rootOperations" class="command-center"></div><p>The Root Manager improves the SOMAS service. Customer Managers improve their own applications. Both share the same planning engine.</p><section class="card"><h2>Root evolution request</h2><form id="rootMissionForm"><label>Service improvement<textarea id="rootMessage" minlength="8" maxlength="2500" rows="4" required placeholder="Improve SOMAS project onboarding reliability and tests"></textarea></label><label>Change type<select id="rootChangeKind"><option value="software">Software</option><option value="intelligence">Intelligence</option><option value="organization">Organization</option><option value="business">Business operations</option></select></label><button class="primary" type="submit">Prepare scoped plan</button></form><pre id="rootResult"></pre></section><section class="card"><h2>Recent proposals</h2><div id="rootProposals"></div></section></main><script type="module" src="/root.js"></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"}});
   }
 
   const inSiteManager=path.match(/^\/s\/([a-z0-9-]{1,70})\/manage$/);
@@ -67,7 +68,7 @@ async function handle(request,env,trace){
     const project=await publicProject(database(env),slug);
     if(!project)return error('site_not_found',404);
     if(project.suspended)return html('<h1>Site temporarily unavailable</h1>',503);
-    return html(renderSite(project.spec,slug));
+    const response=html(renderSite(project.spec,slug));response.headers.set('x-somas-release',String(project.active_release));return response;
   }
   if(!path.startsWith('/api/'))return env.ASSETS.fetch(request);
   // Paddle is not a browser request; verify cryptographic signature instead of an Origin header.
@@ -97,6 +98,20 @@ async function handle(request,env,trace){
     ) SELECT (SELECT count(*)::int FROM received) as received,(SELECT count(*)::int FROM applied) as applied`;
     return json({acknowledged:true,received:rows[0]?.received===1,applied:rows[0]?.applied===1});
   }
+  if(path.startsWith('/api/runner/') && method==='POST') {
+    const sql=database(env),bearer=request.headers.get('authorization')||'';
+    must(/^Bearer [a-f0-9]{64}$/.test(bearer),'runner_unauthenticated',401);
+    const runner=(await sql`SELECT unit_id FROM somas_runtime_runner_tokens WHERE token_hash=${await sha256(bearer.slice(7))} AND expires_at>now() AND revoked=false`)[0];
+    must(runner,'runner_unauthenticated',401);
+    if(path==='/api/runner/claim') {
+      const job=await claimJob(sql,{unitId:runner.unit_id,kinds:['browser_journey']});
+      return json({job:job?{id:job.id,kind:job.kind,leaseToken:job.lease_token,leaseUntil:job.lease_until,payload:job.payload}:null});
+    }
+    const p=await payload(request);must(routeId.test(p.jobId||'')&&routeId.test(p.leaseToken||''),'invalid_runner_request');
+    if(path==='/api/runner/heartbeat')return json(await heartbeat(sql,runner.unit_id,p.jobId,p.leaseToken));
+    if(path==='/api/runner/report')return json({job:await completeBrowserJob(sql,runner.unit_id,p.jobId,p.leaseToken,p.report)});
+    return error('route_not_found',404);
+  }
   must(checkMutationOrigin(request),'request_origin_not_allowed',403);
   trace.stage='database_configuration';
   const sql=database(env);
@@ -114,8 +129,9 @@ async function handle(request,env,trace){
   }
   if(path==='/api/auth/login'&&method==='POST'){
     const p=await payload(request);const email=String(p.email||'').trim().toLowerCase();
-    const rows=await sql`SELECT id,email,password_hash FROM users WHERE email=${email} LIMIT 1`;
+    const rows=await sql`SELECT id,email,password_hash,COALESCE(to_jsonb(users)->>'account_status','active') AS account_status FROM users WHERE email=${email} LIMIT 1`;
     if(!rows.length || !(await verifyPassword(String(p.password||''),rows[0].password_hash)))return error('invalid_credentials',401);
+    must(rows[0].account_status!=='suspended','account_suspended',403);
     const token=randomToken();await createSession(sql,rows[0].id,await sha256(token));
     return json({user:{id:rows[0].id,email:rows[0].email}},200,{'set-cookie':cookieForSession(token,request.url)});
   }
@@ -150,6 +166,32 @@ async function handle(request,env,trace){
 
   // Root and customer SOMAS share the same planner, but not privileges or data.
   const isAdmin=Boolean(env.ADMIN_USER_ID && user.id===env.ADMIN_USER_ID);
+  const rootOperations=path.match(/^\/api\/admin\/root\/operations(?:\/(.*))?$/);
+  if(rootOperations) {
+    must(isAdmin,'admin_required',403);
+    const unit=await ensureRootUnit(sql);
+    return runtimeRoute(sql,unit,rootOperations[1]||'',method,request,env,user);
+  }
+  const adminAccount=path.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/status$/i);
+  if(adminAccount&&method==='POST') {
+    must(isAdmin,'admin_required',403);must(adminAccount[1]!==user.id,'cannot_suspend_current_admin',409);
+    const p=await payload(request);must(['active','suspended'].includes(p.status),'invalid_account_status');
+    const results=await sql.transaction([
+      sql`UPDATE users SET account_status=${p.status} WHERE id=${adminAccount[1]} RETURNING id,account_status`,
+      sql`INSERT INTO audit_events(id,actor_id,action,metadata) SELECT ${uuid()},${user.id},'platform_account_status',jsonb_build_object('accountId',id,'status',account_status) FROM users WHERE id=${adminAccount[1]}`,
+      sql`DELETE FROM sessions WHERE user_id=${adminAccount[1]} AND ${p.status}='suspended'`,
+      sql`UPDATE somas_runtime_runner_tokens SET revoked=true WHERE ${p.status}='suspended' AND unit_id IN (SELECT u.id FROM somas_units u JOIN workspaces w ON w.id=u.workspace_id WHERE w.owner_id=${adminAccount[1]})`
+    ]);
+    must(results[0].length,'account_not_found',404);return json({account:results[0][0]});
+  }
+  if(path==='/api/admin/overview' && method==='GET') {
+    must(isAdmin,'admin_required',403);
+    const accounts=await sql`SELECT u.id,u.account_status,u.created_at,count(w.id)::int AS workspaces FROM users u LEFT JOIN workspaces w ON w.owner_id=u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 100`;
+    const instances=await sql`SELECT p.id,p.slug,p.active_release,p.suspended,s.plan,s.status AS subscription_status FROM projects p JOIN subscriptions s ON s.workspace_id=p.workspace_id ORDER BY p.created_at DESC LIMIT 100`;
+    const health=await sql`SELECT status,count(*)::int AS count FROM somas_runtime_jobs GROUP BY status`;
+    const securityEvents=await sql`SELECT id,action,created_at FROM audit_events WHERE action IN ('platform_instance_suspension','platform_account_status','runtime_browser_credential_issued') ORDER BY created_at DESC LIMIT 30`;
+    return json({accounts,instances,health,securityEvents});
+  }
   if(path==='/api/admin/root'&&method==='GET'){
     must(isAdmin,'admin_required',403);
     const unit=await ensureRootUnit(sql);
@@ -187,7 +229,7 @@ async function handle(request,env,trace){
     return json(await releasePolicy(sql,{scope:'root',candidateId:rootRollback[1],actorId:user.id,rollback:true}));
   }
 
-  if(path==='/api/me'&&method==='GET')return json({user,subscription:await getSubscription(sql,user.id),usage:await usageSummary(sql,user.id),billingConfigured:!!(env.PADDLE_API_KEY&&env.PADDLE_PRICE_ID&&env.PADDLE_WEBHOOK_SECRET),limits:{projects:3,changeRequestsPerMonth:100,aiRequestsPerMonth:Number(env.FREE_MONTHLY_AI_REQUESTS||30)}});
+  if(path==='/api/me'&&method==='GET')return json({user,subscription:await getSubscription(sql,user.id),usage:await usageSummary(sql,user.id),isAdmin,billingConfigured:!!(env.PADDLE_API_KEY&&env.PADDLE_PRICE_ID&&env.PADDLE_WEBHOOK_SECRET),limits:{projects:3,changeRequestsPerMonth:100,aiRequestsPerMonth:Number(env.FREE_MONTHLY_AI_REQUESTS||30)}});
   if(path==='/api/projects'&&method==='GET')return json({projects:await listProjects(sql,user.id)});
   if(path==='/api/projects'&&method==='POST'){
     await allowedSubscription(sql,user);
@@ -203,6 +245,11 @@ async function handle(request,env,trace){
   const projectId=match[1],rest=match[2]||'';must(routeId.test(projectId),'project_not_found',404);
   const project=await requireProject(sql,user,projectId);
   if(!rest&&method==='GET')return json({project:{...project,workspace_id:undefined},agents:await projectAgents(sql,projectId),siteUrl:`${url.origin}/s/${project.slug}`});
+  if(rest==='operations'||rest.startsWith('operations/')) {
+    const unit=await ensureCustomerUnit(sql,project,user.id);
+    if(method!=='GET') {await allowedSubscription(sql,user);must(!project.suspended,'instance_suspended',403);}
+    return runtimeRoute(sql,unit,rest.slice('operations'.length).replace(/^\//,''),method,request,env,user);
+  }
   if(rest==='agents'&&method==='GET')return json({agents:await projectAgents(sql,projectId)});
   if(rest==='unit'&&method==='GET'){
     const unit=await ensureCustomerUnit(sql,project,user.id);
@@ -235,6 +282,7 @@ async function handle(request,env,trace){
   const rollback=rest.match(/^releases\/(\d+)\/rollback$/);
   if(rollback&&method==='POST'){
     await allowedSubscription(sql,user);
+    await ensureCustomerUnit(sql,project,user.id);
     return json({released:true,...await rollbackRelease(sql,projectId,Number(rollback[1]),user.id)});
   }
   if(rest==='requests'&&method==='POST'){
@@ -244,8 +292,8 @@ async function handle(request,env,trace){
     const activeAgents=await projectAgents(sql,projectId);
     const managerPolicy=activeAgents.find(a=>a.role==='manager')?.policy;
     const team=chooseTeam(instruction,managerPolicy), revision=proposeRevision(project.spec,instruction);
-    const task=await createTaskWithProposal(sql,user.id,projectId,instruction,team,revision);
-    let assistant=localAssistantReply(project.spec,instruction,team,revision);
+    const task=await createTaskWithProposal(sql,user.id,projectId,instruction,team,revision,project.active_release);
+    let assistant=localAssistantReply(project.spec,instruction,team,revision).replace('The Manager selected','I selected').replace("the Manager's team",'your team');
     let llmResult=null;
     if(p.useAi===true && env.ENABLE_LLM==='true' && (env.GROQ_API_KEY||env.OPENROUTER_API_KEY)){
       const permitted=await reserveQuota(sql,user.id,'llm',Math.min(1000,Number(env.FREE_MONTHLY_AI_REQUESTS||30)));
@@ -261,6 +309,10 @@ async function handle(request,env,trace){
         }catch(e){assistant+=' (AI provider was unavailable, so I used the local response.)';}
       } else assistant+=' (Monthly AI allocation is exhausted; local planning remains available.)';
     }
+    const unit=await ensureCustomerUnit(sql,project,user.id);
+    await ensureMission(sql,unit);
+    await recordConversation(sql,unit.id,instruction,assistant,task.taskId);
+    await scheduleAssessment(sql,unit,{priority:100,key:'owner-request-'+task.taskId});
     return json({task,assistant,preview:revision.nextSpec,provider:llmResult?.provider||'local'},201);
   }
   if(rest==='browser-findings'&&method==='POST'){
@@ -339,8 +391,42 @@ async function handle(request,env,trace){
   }
   return error('route_not_found',404);
 }
+async function runtimeRoute(sql,unit,rest,method,request,env,user) {
+  if(!rest&&method==='GET') {
+    await scheduleAssessment(sql,unit);
+    return json(await operations(sql,unit));
+  }
+  if(rest==='settings'&&method==='POST')return json(await configureMission(sql,unit,await payload(request)));
+  if(rest==='cycle'&&method==='POST') {
+    must(await reserveQuota(sql,user.id,'runtime_cycles',30),'runtime_cycle_quota_exhausted',429);
+    await scheduleAssessment(sql,unit,{priority:100,key:'manual-'+uuid()});
+    return json(await runLocalJobs(sql,unit.id,env));
+  }
+  if(rest==='runner-token'&&method==='POST') {
+    must(await reserveQuota(sql,user.id,'runner_tokens',30),'runner_token_quota_exhausted',429);
+    must(unit.kind==='customer','customer_runner_only',400);
+    const token=randomToken(32);await issueBrowserToken(sql,unit,await sha256(token),user.id);
+    return json({token,expiresInSeconds:3600,scope:'browser_journey',notice:'One project, browser jobs only. Store securely; never paste into chat.'},201);
+  }
+  if(rest==='retry'&&method==='POST') {
+    must(await reserveQuota(sql,user.id,'runtime_retries',30),'runtime_retry_quota_exhausted',429);
+    const p=await payload(request);must(routeId.test(p.jobId||''),'invalid_job_id');
+    // Owner retries only local transient failures; missing providers cannot become queued by request.
+    const rows=await sql`UPDATE somas_runtime_jobs SET status='queued',blocker=NULL,attempts=0,next_run_at=now()
+      WHERE id=${p.jobId} AND unit_id=${unit.id} AND status IN ('blocked','failed') AND kind IN ('assess_mission','package_application') RETURNING id`;
+    must(rows.length,'job_not_retryable',409);return json({queued:true});
+  }
+  const artifact=rest.match(/^artifacts\/([0-9a-f-]{36})$/i);
+  if(artifact&&method==='GET') {
+    const row=(await sql`SELECT id,kind,body,digest FROM somas_runtime_artifacts WHERE id=${artifact[1]} AND unit_id=${unit.id}`)[0];
+    must(row,'artifact_not_found',404);
+    return json(row.body,200,{'content-disposition':`attachment; filename="somas-${row.kind}-${row.id}.json"`});
+  }
+  return error('route_not_found',404);
+}
 export default {
   async scheduled(event,env,ctx){
+    ctx.waitUntil(missionTick(env).catch(e=>reportFailure(e,'mission_scheduled_work')));
     ctx.waitUntil(cronEvolutionTick(env).catch(e=>reportFailure(e,'scheduled_work')));
   },
   async fetch(request,env){
@@ -352,6 +438,8 @@ export default {
       if(['root_policy_not_promotable','policy_not_promotable'].includes(e.message))return error(e.message,409);
       if(['invalid_evolution_kind','invalid_training_label'].includes(e.message))return error(e.message,400);
       if(['description_must_be_8_to_2500_chars','password_must_be_12_to_128_chars','title_too_short','invalid_template','too_many_sections','invalid_site_spec','at_least_5_verified_examples_required'].includes(e.message))return error(e.message,400);
+      if(['proposal_not_approvable','release_not_found'].includes(e.message))return error(e.message,409);
+      if(e.message==='free_project_limit_3')return error(e.message,409);
       if(e.code==='23505')return error('duplicate_record',409);
       const failure=reportFailure(e,trace.stage);
       return json({error:failure.code,requestId:failure.requestId},failure.status,{'x-request-id':failure.requestId});

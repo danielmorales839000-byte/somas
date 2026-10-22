@@ -174,3 +174,25 @@ Registration diagnostics supplement the authentication contracts: `hashPassword`
 - **A10**: Browser-runner findings are reproducible, distinguishable from synthetic UX opinions, and never perform real purchases.
 - **A11**: Free-tier consumption remains bounded across multiple agents and concurrent requests, with enforced fail-closed quotas.
 - **A12**: A candidate policy cannot promote without verified labels, holdout evidence and explicit owner action; rollback is supported before real production use.
+
+## Durable mission/runtime additions (development branch, migration 004)
+
+See `SOMAS_V2_RELEASE_REVIEW.md` for exact verification and remaining provider gaps.
+
+| Function / API | Contract |
+|---|---|
+| `missionBootstrapStatements(sql, unit)` | Atomic mission and initial assessment, used in project provisioning; immutable original objective and unverified criteria. |
+| `enqueueJob(sql,mission,job)` | Lock mission, enforce monthly new-job allowance, deduplicate, persist needed specialist/policy and real assignment/blocker event. |
+| `claimJob(sql,{unitId,kinds})` | Authorized/server-derived unit only; active mission/account/subscription; SQL SKIP LOCKED, bounded attempts, fenced expiring lease. |
+| `finishJob` / `heartbeat` | Match exact unit, job, lease token and unexpired working lease; stale results fail closed. Browser heartbeat cannot mutate other job kinds. |
+| `missionTick(env)` | No user session; bounded due-unit selection, assessment, package and optional curated research. No arbitrary execution or deployment. |
+| `GET /api/projects/:id/operations` | Owner-scoped mission, job states, events, gaps, retained conversation and artifact references. No runner tokens or foreign data. |
+| `POST .../operations/settings` | Authorized owner/admin pause/resume and bounded monthly job allowance. No production-approval or spending escalation. |
+| `POST .../operations/cycle` | Metered bounded local execution; not a production release action. |
+| `POST .../operations/runner-token` | One-project, browser-only, one-hour credential; hash stored, prior tokens revoked. Never enters logs or prompts. |
+| `POST /api/runner/{claim,heartbeat,report}` | Bearer token scope only; browser job payload, fenced lease, bounded attributed checks. No session impersonation, code execution, deployment or mission-completion authority. |
+| `GET .../operations/artifacts/:id` | Owner-scoped immutable evidence/package body. Digest is a review integrity reference, not provider attestation. |
+| Root `/api/admin/root/operations` | Same runtime with administrator-only fixed Root descriptor. No customer ownership bypass. |
+| `/api/admin/overview` and `POST /api/admin/users/:id/status` | Platform metadata; authorized account suspension/restoration and security audit. Session/runner revocation, self-suspension denied. |
+| `applicationPackage(project)` | Validated typed content only; separate app identity, Worker config, entry point and digest. Prepared status cannot be treated as a deployed URL. |
+| `createTaskWithProposal(...,baseRelease)` / `approveProposal` | Base release is the exact snapshot used to compute the revision. Locked approval rejects stale/legacy proposals; release/audit/event writes are atomic. |

@@ -7,7 +7,10 @@ export async function cronEvolutionTick(env){
   const projects=await sql`SELECT p.id,p.spec,p.active_release FROM projects p
     JOIN subscriptions s ON s.workspace_id=p.workspace_id
     LEFT JOIN instance_checks c ON c.project_id=p.id
-    WHERE p.suspended=false AND s.status IN ('trial','active')
+    LEFT JOIN somas_units u ON u.project_id=p.id LEFT JOIN somas_runtime_missions m ON m.unit_id=u.id
+    JOIN workspaces w ON w.id=p.workspace_id JOIN users owner ON owner.id=w.owner_id
+    WHERE p.suspended=false AND s.status IN ('trial','active') AND (m.id IS NULL OR m.state='active')
+      AND COALESCE(to_jsonb(owner)->>'account_status','active')='active'
       AND (c.checked_at IS NULL OR c.checked_at < now()-interval '24 hours' OR c.last_release<>p.active_release)
     ORDER BY c.checked_at NULLS FIRST LIMIT 3`;
   let audited=0;

@@ -1,4 +1,5 @@
 import pg from 'pg';
+import {withWasm} from './wasm-fixture.js';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
@@ -6,6 +7,7 @@ import {neonConfig} from '@neondatabase/serverless';
 
 /** Real disposable local PostgreSQL; Neon HTTPS is adapted, not hosted. */
 export async function withPostgres(uri,run){
+  if(uri==='wasm')return withWasm(run);
   const url=new URL(uri);
   assert.ok(['127.0.0.1','localhost','[::1]'].includes(url.hostname),'Never use a hosted/production test database');
   const name='somas_test_'+randomUUID().replaceAll('-','');
@@ -24,7 +26,7 @@ export async function withPostgres(uri,run){
         for(const {query,params} of body.queries||[body]){
           const result=await connection.query({text:query,values:params,rowMode:'array'});
           results.push({fields:result.fields.map(f=>({name:f.name,dataTypeID:f.dataTypeID})),rowCount:result.rowCount,
-            rows:result.rows.map(row=>row.map(v=>v===null?null:v instanceof Date?v.toISOString():typeof v==='object'?JSON.stringify(v):String(v)))});
+            rows:result.rows.map(row=>row.map(v=>v===null?null:v instanceof Date?v.toISOString().replace('T',' ').replace('Z','+00'):typeof v==='object'?JSON.stringify(v):String(v)))});
         }
         if(batch)await connection.query('COMMIT');
         return Response.json(batch?{results}:results[0]);
