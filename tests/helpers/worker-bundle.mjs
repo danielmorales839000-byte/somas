@@ -1,3 +1,4 @@
+import {pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.resolve('vite'));
 export async function workerBundle(path){
