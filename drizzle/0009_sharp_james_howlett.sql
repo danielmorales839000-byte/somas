@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `oauth_identity_subject` ON `oauth_identities` (`provider`,`issuer`,`subject`);

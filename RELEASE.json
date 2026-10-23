@@ -1,7 +1,0 @@
-{
-  "source_commit": "7e3b4a87290e79642492f61b8169e43d23164aba",
-  "release": "project-ai-team-v1",
-  "tests_passed": 131,
-  "target": "Cloudflare Workers + Neon",
-  "external_deployment": "not performed in this environment"
-}
