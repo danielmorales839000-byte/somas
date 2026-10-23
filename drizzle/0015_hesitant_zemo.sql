@@ -1,0 +1,1 @@
+ALTER TABLE `project_publications` ADD `team_runtime` integer DEFAULT 0 NOT NULL;

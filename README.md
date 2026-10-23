@@ -1,121 +1,80 @@
-# SOMAS v2 — Free-first executable alpha
+# SOMAS MVP
 
-**Development audit/runtime update:** see [SOMAS_V2_RELEASE_REVIEW.md](docs/SOMAS_V2_RELEASE_REVIEW.md) for integrated Manager conversation, mission jobs, Live Organization, Root operations, scoped browser runner, independent application packages, migration 004 and exact test evidence. This update is not production-deployed. The live source/schema mismatch and unavailable coding/hosting providers remain blockers to full product acceptance. Earlier alpha descriptions below refer to the base implementation unless superseded by that review.
+A private, full-stack AI team workspace on Sites / Cloudflare Workers, with D1 persistence and free-tier Groq inference. The former browser-only animation has been replaced by actual server requests. There is no simulated provider or timer-generated website fallback in production.
 
-Development verification: `npm ci`, `npm run check`, `npm run test:sql`, `npm run test:postgres` (non-root native PostgreSQL), `npx playwright install chromium`, `npm run test:runtime-browser`. All runtime integration uses disposable data. Do not point these tests at production.
+## Activation
+
+1. Sign in through the platform's Continue with ChatGPT link.
+2. Open **Connect AI** and enter a key from your **Groq Free account**. The server verifies the model catalog and encrypts the key per user in D1. A key is never sent to an LLM, returned by the API, stored in browser storage, or committed.
+3. Select Manager and specialist models from the verified catalog, if desired.
+4. Create a project and give the Manager a goal. The Manager repeatedly assigns work, evaluates reports, saves lessons and starts the next round until paused. Fast stepping works on the dashboard and project pages; hourly cloud runs advance work while closed.
+
+The runtime requires `APP_DATA_KEY`, a persistent random server secret configured through Sites runtime secrets. Keep it stable; changing it requires users to reconnect their provider keys. Database binding is `DB`. Deployment applies generated schema migrations.
+
+## Included behavior
+
+- Owner-isolated projects and provider connections using platform-authenticated user IDs.
+- Manager-only project start, followed by model-selected specialists and task assignments. Researcher supports the Manager; no separate Assistant exists.
+- Working, resting, reporting, evaluating, learning and blocked states driven by actual task transitions.
+- Real specialist reports and a separate Manager inference for every evaluation. Evaluated quality is explicitly the Manager's assessment, not a benchmark of intelligence.
+- Separate persistent memories and memory versions. Accepted reports add evidence-linked lessons to the specialist and Manager. External model weights remain frozen.
+- Private chatroom projects include a durable General room with text messages, ChatGPT authentication and three-second polling. Public rooms, file sharing and email/password signup are not implemented.
+- Schema-validated business websites, immutable release snapshots, rollback as a new revision, and a project inquiry inbox.
+- Cross-origin write rejection, owner checks on every project operation, encryption with per-owner authenticated data, project execution leases, correction retries with Manager replanning and provider timeouts.
+- Five-second account-wide call spacing, explicit provider-quota queues, continuous rounds until paused. Pause takes effect for subsequent tasks while an in-flight request finishes.
+
+## Deliberate MVP limits
+
+Websites are generated as validated structured business pages with Agents and Preview views. Guided onboarding helps customers create/connect Cloudflare accounts and choose a generated hosting address or a new registered domain. SOMAS saves the choice and automatically deploys approved revisions after provider setup. Cloudflare handles signup verification and paid checkout. Root and per-project Subnet Managers exchange scoped reports and advisory guidance. See [independent hosting and manager network](docs/independent-hosting.md). Arbitrary code execution, payment processing and isolated browser runners are unsupported. Research has no live browsing tool, and agent reports cannot claim unobserved external work. The existing hosted audience is preserved.
+
+Browser stepping is fast but is not a permanent worker. The linked hourly Sites schedule calls the private shared runner while closed. Each call advances one checkpoint, with a maximum 25-second provider request and durable state between calls. The hourly task runs a bounded batch and yields at quota; it does not guarantee second-by-second unattended work. Free provider limits apply across the account and may delay jobs. An API key does not establish that an account is on a free billing tier; keep the provider account on Free. The application never upgrades the account. Provider model availability is discovered at connection time.
+
+The previous local demo projects remain untouched in the browser but are not imported as real projects or training evidence.
+
+## Validation
+
+`npm test` runs schema, ownership, CSRF, encryption, report/evaluation/learning, concurrent request, pause, quota, incomplete output, revision and inquiry tests against an in-memory SQLite implementation of the D1 interface. Provider fixtures exist only in tests. These tests do not demonstrate successful live Groq inference.
+
+Use the Sites build workflow. Local D1 and hosted D1 are separate databases. Run each generated SQL migration once against the local database before browser QA. No credentials are required for the test suite.
+
+## Background runner and operations
+
+`GET /api/runner` reports job status; `POST /api/runner` advances one eligible publication stage or team. Both require the configured administrator’s platform identity or `X-SOMAS-Runner-Authorization` matching the server-side `SOMAS_RUNNER_TOKEN`. `PRIVATE_RUNNER_ENABLED=true` is retained as the enable switch, but it no longer replaces authentication. The Site may be public while workspaces remain isolated. Ordinary users call `POST /api/work`, which restricts all selection, work and returned status to their authenticated user ID.
+
+Cloud callers obtain `siwc_bypass_bearer_token` from Sites `get_site` and send it only to this Site as both `OAI-Sites-Authorization: Bearer …` (platform access) and `X-SOMAS-Runner-Authorization: …` (app runner authorization). `SOMAS_RUNNER_TOKEN` is configured from that supported service credential through native runtime secrets; no credential is stored in source, browser code or prompts. If Sites rotates the service credential, the stored runner value needs updating; fail closed until it matches. Never fabricate visitor identity.
+
+Runs can call the writer up to 80 times or eight minutes, respecting `nextAt`, then read status again. Stop when no job is eligible, at provider quota, pause or an actionable configuration error. Do not repeatedly hammer the provider. The status response also lists `setups` and `publications`; waiting setup, queued/publishing/domain-pending jobs are eligible at their `next_at` time when no lease is active. A publishing step returns `processed` with the project ID and `kind: publication`, so batch callers continue through its checkpoints. Routine data updates do not require republishing SOMAS.
+
+The runner upgrades eligible legacy auto-improve jobs once (runner version 2), preserving their tasks, reports, memories and releases. Explicit pauses, disconnected credentials, authentication errors and restored revisions stay stopped. Transient failures retain tasks and queue exponential retries; invalid model output includes format guidance on the next attempt. Unsupported provider configurations require Settings rather than an infinite retry loop.
+
+## Two management levels
+
+- **Root Manager / root team:** a separate persistent service project, linked by the `service` table. It observes database/encryption readiness, project execution status/errors, and user opinions. Its six specialists report to Root Manager and maintain separate memories. It can apply validated dashboard headline, Guide copy and 5–60 second model-call spacing after a real Manager review. Root findings outside these tools stay `needs_code`; this runtime cannot repair arbitrary source or claim all problems are fixed.
+- **Subnet Manager / project team:** each user project retains its own requirement, reports, memories, revisions and execution loop. Root settings never replace project goals.
+- Both use the shared fair runner and the existing hourly background schedule, yielding to provider quotas and explicit pauses. There is no permanent daemon or neural-weight training.
+
+`SOMAS_ADMIN_USER_ID` is configured server-side from the existing owner’s Site-scoped identity. No first-visitor/admin bootstrap exists. Only that administrator can list users and inspect their projects. Inspection of another user's project is read-only; project mutation and private message access still require ownership. No provider secret appears in management responses. Sign-in records display name/email when provided; legacy owners appear without invented profile data.
+
+The dashboard replaces **Send SOMAS team** with **Opinions**, and adds **User management** and **Root team** for the administrator. Opinions are durable, visible to their author and the administrator, and included as untrusted evidence at the root team’s next diagnostic round.
 
 
-Root/Customer Mission integration is prepared locally: see [ROOT_CUSTOMER_INTEGRATION_REVIEW.md](docs/ROOT_CUSTOMER_INTEGRATION_REVIEW.md) for shared-engine boundaries, migration 003, tests and approval gates. Root plans improve SOMAS; customer plans improve only the owner's application. Plans do not execute or deploy themselves.
+## Provider selection and agent values
 
-> **A completely new codebase.** Cloudflare Worker + Neon PostgreSQL. User-created sites include a private Manager/Assistant panel and independently persisted agents. This alpha is a **constrained vertical slice**, not an arbitrary, autonomous full-stack coding platform.
+Connect AI supports user-owned Groq, Google Gemini, OpenAI, Anthropic and OpenRouter keys. Provider endpoints are allowlisted; switching requires a freshly verified key for that provider. Each account selects a Manager model and a specialist model from its provider catalog. No application-wide provider key is needed. Stored credentials are encrypted and owner-bound.
 
-## What works in this repository
+Agent vitals show saved execution states, live elapsed age, purpose, token usage and a learning value. New agents record creation timestamps; legacy specialists show tracked age from their first retained report. Learning adds one for each accepted evidence-linked lesson and can decrease when evidence is withdrawn. This is persistent memory, not model-weight training.
 
-- Register and sign in with a 12+ character password, hashed on the server; session cookie is HttpOnly, SameSite=Strict.
-- Create up to **three** private SOMAS projects per free workspace. A project instantly becomes a public site at `/s/<unique-slug>` on the **same Worker deployment**. No additional hosting project or card is needed for each virtual site.
-- Each project initializes **Manager, Assistant, and Virtual Customer** agents, each with separate persisted trainable policy weights. On-demand specialist agents also receive independent policies.
-- The public site contains **`/s/<slug>/manage`**, a real owner-authenticated SOMAS Manager + Assistant interface. Owners can ask for changes without returning to the main dashboard.
-- Manager selects task-specific specialist teams. Current agents can safely propose these structured changes: change site title, description, supported theme, add a content section, add an FAQ. Other requests are recorded as **needs engineering**, NOT falsely deployed.
-- Release proposals need explicit owner approval; releases are versioned, and code can restore an earlier content-spec as a new release.
-- Virtual Customer performs labeled **static experience heuristics**; real Playwright browser-navigation runner is included separately for developer/CI environments.
-- Daily cron checks up to three instances per run; it records findings but never changes a live site or trains weights by itself.
-- Optional allowlisted documentation research with provenance; disabled by default. Optional Groq/OpenRouter gateway behind Worker secrets; disabled by default, requests metered.
-- Verified owner-labeled neural examples, candidate training, holdout evaluation, manual promotion; stored separately by agent/tenant.
-- Free-plan usage counters, Paddle **optional checkout adapter and signed subscription webhook** (requires merchant onboarding), admin instance-suspension and audit records.
-- Browser UI for projects, Assistant, proposals, agents, neural training feedback, findings, rollback and usage.
+Usage is recorded for model responses even when output validation fails. OpenRouter-reported cost is retained when supplied. Other costs use the user’s per-million-token rates or their explicitly selected free tier. Unknown rates remain unknown; historical calls are not retroactively priced. Estimates exclude unreported provider charges and are not invoices. Existing Groq connections migrate with unknown pricing.
 
-## Fresh deployment: Neon + Cloudflare
+Saved pending reports take priority over new tasks. Quota waits retain their review; changing credentials requeues provider-blocked, unpaused work. Continuous work remains subject to provider limits and the existing page-driven/hourly runner.
 
-**Requirements:** Node.js 22+, npm, a free Neon PostgreSQL project, a Cloudflare account. GitHub is optional until you want CI/CD.
 
-1. Download/unzip this project. Do not merge with any older SOMAS app; this repo has a new data model.
-2. Create a database using [Neon](https://console.neon.tech/). Copy its pooled or direct PostgreSQL connection URL from the dashboard. **Never put it in GitHub or public JS.**
-3. After schema review/approval, in Neon's **SQL Editor**, execute `db/001_initial.sql`, `db/002_operations.sql`, then `db/003_recursive_units.sql` in that order. Back up existing data first; test 003 on a dedicated branch/database. These scripts are **not a full migration framework**. Do not deploy the mission feature before 003 is applied.
-4. Run `npm install` inside the project directory.
-5. Copy `.dev.vars.example` to `.dev.vars`, fill `DATABASE_URL` with the Neon connection string, keep LLM credentials blank unless desired.
-6. Run `npm run dev`. Open the local URL displayed by Wrangler (typically `http://localhost:8787`). Register; create an application; visit its `/s/...` public URL and `/s/.../manage` owner console.
-7. Run `npm run check` for the local unit/syntax checks. Use browser suite separately if desired.
-8. Run `npx wrangler login` and `npx wrangler secret put DATABASE_URL` (enter the Neon connection URL when prompted).
-9. Run `npm run deploy`. Wrangler prints your `*.workers.dev` public URL after successful deployment. All customer sites appear under **this URL's `/s/` route**.
-10. For a custom domain, follow Cloudflare Workers domain routing docs. A custom per-customer domain is **not yet automated**.
+## Membership and human administration
 
-### Set up an admin
+The pending feature branch adds required inbox verification, owner-approved human Managers, user suspension/project controls, activity logs, opinion notifications and prepared social sharing. See [setup and review](docs/membership-administration.md) before deploying. Configure `RESEND_API_KEY` and an authorized `MAIL_FROM` sender first; preserve `APP_DATA_KEY` and `SOMAS_ADMIN_USER_ID`. Without a sender, verification intentionally blocks workspace access. The signup email is used as Reply-To on opinion notifications, not as an unauthorized From address. Owner-only Gmail API sending is available; automatic Instagram/YouTube publishing is not implemented.
 
-Register your own account first; retrieve its immutable UUID from the Neon SQL Editor with `SELECT id FROM users WHERE email='your-email@example.com';`. Add it securely with `npx wrangler secret put ADMIN_USER_ID`. This identity—not an unverified email string—authorizes:
+## Deploy this version to Cloudflare + Neon
 
-- `GET /api/admin/instances`
-- `POST /api/admin/instances/:id/suspend` with JSON `{"suspended":true,"reason":"..."}`
-
-**Never set the admin ID to an arbitrary customer's account.** A proper admin console, MFA, and support roles are later milestones.
-
-### Optional LLM gateway
-
-- Set `ENABLE_LLM` to `"true"` under `vars` in `wrangler.jsonc` and redeploy.
-- Add **one** of `GROQ_API_KEY` or `OPENROUTER_API_KEY` using `npx wrangler secret put <NAME>`.
-- The Assistant uses the gateway only when the owner checks *Use optional external AI explanation*; it **never** receives keys directly.
-- The model IDs are starter defaults, **not promises of free capacity**. Check current provider pricing, commercial-use terms, data retention, and request quotas before use.
-- Token usage is logged per user/project. The quota counts attempts, including failed provider requests.
-- The neural filter performs local routing before the external call. Deterministic orchestration still works if the provider is disabled.
-
-### Optional Paddle billing
-
-The checkout adapter and webhook handler are included; **real recurring payment does not start until you register/verify a Paddle merchant account**, configure product/price IDs, a verified/default checkout payment URL, and a webhook destination.
-
-1. Configure Paddle sandbox and prices. Set `PADDLE_API_KEY`, `PADDLE_PRICE_ID`, `PADDLE_WEBHOOK_SECRET` via Wrangler secrets. Set `PADDLE_SANDBOX=true` in vars for tests and redeploy.
-2. Set your approved Paddle default payment link in the Paddle dashboard. The link page must load Paddle.js and support Paddle transaction checkout.
-3. Configure the webhook destination as `https://your-worker.workers.dev/api/webhooks/paddle`.
-4. The logged-in user can call `POST /api/billing/checkout` with `x-somas-request: 1`; it returns a provider checkout URL created with a server-owned workspace reference.
-5. Verified subscription webhooks update only matching workspace subscriptions, deduplicate events, and ignore stale provider timestamps.
-6. Do **not** go live without testing sandbox checkout, webhook retries, cancellations, grace periods, billing reconciliation, refunds and customer support flows.
-
-**Important:** The default UI does not show a live payment button when billing is unconfigured. This is intentional; never collect cards in SOMAS UI.
-
-### Optional browser-based Virtual Customer
-
-Worker free-tier CPU cannot host unrestricted browser automation. Run the Playwright integration in CI or a separate isolated machine:
-
-```bash
-npx playwright install chromium
-TEST_SITE_URL=https://YOUR-WORKER.workers.dev/s/YOUR-SLUG npx playwright test tests/customer-browser.spec.js
-```
-
-For a report that **feeds real browser findings back into the instance's Manager queue**:
-
-```bash
-SOMAS_BASE_URL=https://YOUR-WORKER.workers.dev \
-SOMAS_PROJECT_ID=YOUR_PROJECT_UUID \
-SOMAS_EMAIL=OWNER_EMAIL \
-SOMAS_PASSWORD=OWNER_PASSWORD \
-npm run virtual-customer
-```
-
-Use protected CI secrets when scheduling this runner; avoid putting credentials into scripts or shell history. The output is saved as findings with method `playwright_browser`, distinct from the built-in static heuristics.
-
-### Scheduled checks and research
-
-`wrangler.jsonc` includes a daily 04:00 UTC cron trigger. It runs **bounded static audits of up to three instances per day** and optionally retrieves *one* curated MDN document if `ENABLE_EXTERNAL_RESEARCH=true`.
-
-Research documents are held only as sourced evidence. SOMAS does not republish their content, modify deployed sites, or train neural weights using raw scraped text. The manual research endpoint only accepts `https://developers.cloudflare.com`, `https://developer.mozilla.org`, and `https://neon.com` URLs without redirects.
-
-## Useful commands
-
-```bash
-npm install
-npm run dev
-npm run check
-npm run deploy
-```
-
-### Tests verified locally in package authoring environment
-
-The registration investigation adds password-runtime, API, actual Worker and opt-in real PostgreSQL tests. See [REGISTRATION_DIAGNOSIS.md](docs/REGISTRATION_DIAGNOSIS.md) for evidence, commands, remaining production uncertainty and the password-work-factor tradeoff. `npm run check` runs automated tests and syntax checks. The PostgreSQL case is skipped without a disposable loopback `SOMAS_TEST_DATABASE_URL`; it is distinct from hosted Neon validation. Browser tests need a separately supplied `TEST_SITE_URL`.
-
-## Production limitations (do not ignore)
-
-This is a serious alpha foundation—not ready for unrestricted public signup or payment collection. Important outstanding controls include email verification, signup/login abuse protection, MFA, team membership/RBAC, DB-level tenant RLS, connection/quotas load testing, data export and deletion, automatic backups, professional incident response, SOC2/privacy assessments, secret rotation UI, production billing reconciliation, domain provisioning, isolated code executors and secure migration runners.
-
-**No arbitrary generated full-stack code is executed or deployed.** This version offers typed template edits. A separate sandboxed coding worker with GitHub integration, tests and staging is required before SOMAS can safely implement arbitrary changes autonomously.
-
-## Developer guidance
-
-Read `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/FUNCTION_CONTRACTS.md`, and `docs/IMPLEMENTATION_ROADMAP.md` before extending the code. See `docs/DEPLOYMENT_AND_SECURITY.md` for risks and rollout gates.
+For the current website's independent Cloudflare Worker, Neon migration,
+signup verification and password login, see [the deployment guide](docs/cloudflare-neon.md).
+Use `pnpm run build:cloudflare`; the existing Sites deployment remains a separate target.

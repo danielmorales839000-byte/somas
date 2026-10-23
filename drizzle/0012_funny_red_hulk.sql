@@ -1,0 +1,1 @@
+ALTER TABLE `project_publications` ADD `publish_stage` text DEFAULT 'preflight' NOT NULL;

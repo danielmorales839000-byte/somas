@@ -1,0 +1,1 @@
+ALTER TABLE `publication_intents` ADD `root_origin` text DEFAULT '' NOT NULL;

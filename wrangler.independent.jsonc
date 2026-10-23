@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "somas-cloudflare-neon",
+  "main": "worker/independent.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "triggers": {"crons": ["0 * * * *"]},
+  "vars": {"AUTH_MODE": "password", "INDEPENDENT_HOSTING": "true", "EMAIL_VERIFICATION_REQUIRED": "true", "PRIVATE_RUNNER_ENABLED": "true"}
+}

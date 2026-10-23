@@ -1,0 +1,10 @@
+'use client';
+import {useRef,useState} from 'react';
+import {Share2,X,Copy,ArrowUpRight} from 'lucide-react';
+import {shareKit} from '../../public/share-content.mjs';
+export default function SharePanel(){
+ const dialog=useRef<HTMLDialogElement>(null),[kit,setKit]=useState<ReturnType<typeof shareKit>|null>(null),[status,setStatus]=useState('');
+ function record(platform?:string){void fetch('/api/share-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({screen:'share',...(platform?{platform}:{})})}).catch(()=>{})}
+ async function copy(){try{await navigator.clipboard.writeText(kit!.caption);setStatus('Explanation and public link copied.')}catch{setStatus('Select and copy the text below.')}}
+ return <><button type="button" className="sl-share-trigger" onClick={()=>{setKit(shareKit(location.origin));dialog.current?.showModal();record()}}><Share2 size={15}/>Share SOMAS</button><dialog ref={dialog} className="sl-share-dialog"><div className="sl-share-heading"><h2>Share the idea.</h2><button type="button" aria-label="Close sharing" onClick={()=>dialog.current?.close()}><X size={20}/></button></div><p>We prepare the explanation. You review and publish.</p>{kit&&<><label htmlFor="share-caption">Ready-to-use explanation</label><textarea id="share-caption" readOnly rows={6} value={kit.caption}/><button type="button" className="sl-button sl-button-primary" onClick={copy}><Copy size={15}/>Copy explanation</button><div className="sl-share-grid">{kit.channels.map((channel:{id:string,name:string,mode:string,url:string})=><a key={channel.id} href={channel.url} target="_blank" rel="noopener noreferrer" onClick={()=>{record(channel.id);if(['instagram','youtube'].includes(channel.id))void copy()}}><b>{channel.name}<ArrowUpRight size={14}/></b><small>{channel.mode}</small></a>)}</div></>}<p className="sl-share-note">Facebook shares the public link; paste the prepared explanation into your post. Instagram requires an image or video. YouTube requires a video. These buttons do not publish automatically.</p><p role="status">{status}</p></dialog></>;
+}
