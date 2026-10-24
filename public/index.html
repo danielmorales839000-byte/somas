@@ -1,45 +1,83 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="SOMAS v2, self-organizing application platform">
-<title>SOMAS v2 · Your AI application team</title>
-<link rel="stylesheet" href="/style.css">
-</head>
-<body>
-<header class="topnav">
-  <div class="brand"><span class="brand-icon">◈</span> SOMAS <span class="brand-version">v2</span></div>
-  <nav><span class="header-note">Self-organizing applications</span><button id="logout" class="text-button hidden">Sign out</button></nav>
-</header>
-<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-<div class="auth-layout" id="authArea">
-  <section class="welcome-panel"><div class="eyebrow light">THE NEXT WORK ENVIRONMENT</div><h1>Your application.<br><em>Its own AI team.</em></h1><p>Describe your idea. SOMAS creates a live site with an integrated Manager, Assistant, and Virtual Customer. Improve it continuously from one control center.</p><div class="feature-pills"><span>◉ Private instances</span><span>◉ Trainable policies</span><span>◉ Approval-first releases</span></div></section>
-  <section class="auth-card"><div class="eyebrow">GET STARTED</div><h2 id="authTitle">Create your account</h2><p class="muted">Your SOMAS workspace is isolated from other users.</p><form id="authForm"><label>Email<input type="email" id="authEmail" placeholder="you@company.com" required maxlength="180" autocomplete="email"></label><label>Password<input type="password" id="authPassword" placeholder="At least 12 characters" minlength="12" maxlength="128" required autocomplete="new-password"></label><button id="authSubmit" class="primary" type="submit">Create free account <span>→</span></button></form><p class="muted center" id="authToggleWrap">Already have an account? <button class="link-button" id="authToggle">Sign in</button></p><p class="legal">Free-first prototype • No payment information required • No arbitrary code execution</p></section>
-</div>
-<div class="dashboard hidden" id="dashboard">
-  <aside class="sidebar">
-    <div class="side-label">WORKSPACE</div><button class="nav-item active" id="navProjects">▦ &nbsp; Projects</button><button class="nav-item" id="navUsage">◷ &nbsp; Usage & plan</button><button class="nav-item" id="navAbout">⌘ &nbsp; Architecture</button><div class="side-footer"><span class="status-dot"></span> Neon + Cloudflare<br><small id="accountEmail"></small></div>
-  </aside>
-  <main class="content">
-    <section id="overviewPage">
-      <div class="headline"><div><div class="eyebrow">YOUR AI ORGANIZATION</div><h1>Application workspace</h1><p class="muted">Create and operate websites with their own SOMAS team.</p></div><button class="primary small" id="newProjectButton">+ New project</button></div>
-      <div class="stat-grid"><div class="stat"><small>Projects</small><strong id="projectCount">0</strong></div><div class="stat"><small>Included sites</small><strong>3</strong></div><div class="stat"><small>Monthly plan</small><strong>Free</strong></div></div>
-      <div id="projectsList" class="project-grid"></div>
-      <section id="createProject" class="card hidden"><div class="section-head"><h2>Create a SOMAS instance</h2><button id="closeProject" class="text-button">Close</button></div><form id="createProjectForm"><div class="two-col"><label>Project name<input id="projectTitle" required minlength="2" maxlength="90" placeholder="My Business"></label><label>Starter application<select id="projectTemplate"><option value="business">Business website</option><option value="portfolio">Portfolio</option><option value="store">Storefront preview (no checkout)</option></select></label></div><label>What should this application do?<textarea id="projectPurpose" required minlength="8" maxlength="2500" rows="4" placeholder="Describe your users, goals, and the services you want to offer..."></textarea></label><p class="hint">The first release is a constrained content-driven website. SOMAS adds Manager, Assistant, and Virtual Customer agents to its private control plane automatically.</p><button class="primary" type="submit">Provision instance →</button></form></section>
-    </section>
-    <section id="detailPage" class="hidden">
-      <button class="back" id="backToProjects">← All projects</button>
-      <div class="headline"><div><div class="eyebrow">DEPLOYED SOMAS INSTANCE</div><h1 id="detailTitle">Project</h1><p id="detailPurpose" class="muted"></p></div><a id="siteLink" class="primary small" href="/" target="_blank" rel="noopener">Open live site ↗</a></div>
-      <div class="tabs"><button class="tab selected" data-tab="assistant">Assistant</button><button class="tab" data-tab="proposals">Evolution</button><button class="tab" data-tab="agents">Agent team</button><button class="tab" data-tab="audit">Virtual Customer</button><button class="tab" data-tab="releases">Releases</button></div>
-      <section class="pane" id="tab-assistant"><div class="card"><div class="section-head"><div><h2>Talk to your SOMAS Assistant</h2><p class="muted">The Assistant interprets requests and asks the Manager to assemble the right team.</p></div><span class="pill">Local planning</span></div><form id="requestForm"><label>Your request<textarea id="requestMessage" minlength="8" maxlength="2500" rows="4" required placeholder="Try: Change the title to My New Business — or: Add a section called Our Mission with content We help local companies grow."></textarea></label><label class="inline-check"><input id="useAI" type="checkbox"> Use optional external AI explanation (consumes allowance)</label><button class="primary" type="submit">Send to Manager →</button></form><div id="assistantAnswer" class="response hidden"></div></div></section>
-      <section class="pane hidden" id="tab-proposals"><div class="card"><h2>Evolution proposals</h2><p class="muted">Nothing changes live until the owner approves a supported proposal. Unsupported development requests are tracked rather than simulated as completed.</p><div id="proposalsList"></div></div></section>
-      <section class="pane hidden" id="tab-agents"><div class="card"><h2>Your SOMAS team</h2><p class="muted">The three permanent agents are always present. The Manager creates specialist agents as needed.</p><div id="agentsList" class="agent-grid"></div></div><div class="card"><h2>Neural learning</h2><p class="muted">Policies are independent. Training requires owner-verified labels and an evaluation gate; reading a webpage never directly changes weights.</p><div id="learningList"></div></div></section>
-      <section class="pane hidden" id="tab-audit"><div class="card"><div class="section-head"><div><h2>Virtual Customer</h2><p class="muted">Static usability checks of the deployed template. Real browser flows require the Playwright runner.</p></div><button class="primary small" id="auditButton">Run audit</button></div><div id="findingsList"></div></div></section>
-      <section class="pane hidden" id="tab-releases"><div class="card"><h2>Release history</h2><p class="muted">Every approved change creates a version; a rollback creates a new version instead of deleting history.</p><div id="releasesList"></div></div></section>
-    </section>
-    <section id="usagePage" class="hidden"><div class="eyebrow">SUBSCRIPTION & ALLOWANCES</div><h1>Usage and plan</h1><div class="card"><h2>Prototype free plan</h2><p class="muted">Monthly subscriptions and provider checkout are designed but intentionally disabled until a payment account is configured.</p><div id="usageDetails"></div></div></section>
-    <section id="aboutPage" class="hidden"><div class="eyebrow">SYSTEM DESIGN</div><h1>How SOMAS v2 works</h1><div class="card prose"><h2>Root Manager → Customer instance → Continuous improvement</h2><p>The central platform provisions a private application workspace with a Manager, Assistant and Virtual Customer. Customer-facing sites publish at <code>/s/slug</code> on the same Cloudflare deployment; each customer's agents, policies, and content live in Neon PostgreSQL.</p><p>The Manager assigns specialists; the Assistant relays owner requests; the Virtual Customer evaluates user experiences. An AI gateway can use centrally held keys. Neural policy training happens only from owner-labelled examples.</p><p><strong>Not yet automatic:</strong> unrestricted code generation, external domain provisioning, actual browser traversal in the Worker, autonomous neural promotion, merchant checkout, and background research.</p></div></section>
-  </main>
-</div>
-<script type="module" src="/app.js"></script>
-</body></html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f8fbff" />
+    <meta
+      name="description"
+      content="Our future with AI. Explore self-organizing AI organizations and a proposed network connecting them. An interactive SOMAS concept exhibition."
+    />
+    <title>OUR FUTURE WITH AI — SOMAS</title>
+    <link rel="stylesheet" href="/exhibition/theme.css" />
+    <link rel="stylesheet" href="/exhibition/community.css" />
+    <script type="module" src="/exhibition/main.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <div class="demo-banner">
+      DEMO VERSION — SOMAS is currently demonstrating its future vision. Agent
+      activities, project evolution, and blockchain information may be
+      simulated.
+    </div>
+    <div class="app-shell">
+      <aside class="side" id="sidebar">
+        <a href="/" class="brand"
+          ><span class="brand-mark">S</span>SOMAS<span class="brand-dot"></span
+        ></a>
+        <p class="side-label">EXPLORE THE FUTURE</p>
+        <nav id="navigation" aria-label="Public navigation"></nav>
+        <div class="sidebar-end">
+          <a href="/account/">Community account ↗</a
+          ><small>Two Ideas.<br />One Possible Future.</small>
+        </div>
+      </aside>
+      <div class="page-shell">
+        <header class="topbar">
+          <button
+            id="menu"
+            class="icon-button"
+            aria-label="Toggle navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            ☰</button
+          ><span
+            >THE SOMAS EXHIBITION <b>/</b>
+            <span id="breadcrumb">Dashboard</span></span
+          ><span class="concept-label">◈ INTERACTIVE CONCEPT</span>
+        </header>
+        <main id="content" tabindex="-1"></main>
+        <footer>
+          OUR FUTURE WITH AI <span>Two Ideas. One Possible Future.</span
+          ><a href="/privacy/">Privacy</a>
+        </footer>
+      </div>
+    </div>
+    <div class="global-actions">
+      <button data-share>↗ Share the vision</button
+      ><a href="/contact/">✎ Give feedback</a>
+    </div>
+    <dialog id="share-dialog">
+      <button class="dialog-close" aria-label="Close sharing">×</button>
+      <p class="eyebrow">LET THE IDEA TRAVEL</p>
+      <h2>Share a possible future.</h2>
+      <textarea id="share-text" aria-label="Social post" rows="4"></textarea>
+      <div class="share-links">
+        <a id="fb-share" target="_blank" rel="noopener">Facebook ↗</a
+        ><button id="native-share">Share on your device ↗</button
+        ><a href="https://www.instagram.com/" target="_blank" rel="noopener"
+          >Instagram ↗</a
+        ><a href="https://www.youtube.com/" target="_blank" rel="noopener"
+          >YouTube ↗</a
+        >
+      </div>
+      <button id="copy-share" class="primary">Copy post & link</button>
+      <p class="muted fine">
+        Copy the post, open your platform, and review before publishing. No
+        automatic social posting or account access.
+      </p>
+      <p id="share-status" role="status"></p>
+    </dialog>
+  </body>
+</html>
