@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "somas-v2",
+  "name": "somas-cloudflare-neon",
   "main": "src/index.js",
   "compatibility_date": "2026-10-21",
   "assets": {
