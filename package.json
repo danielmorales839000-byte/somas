@@ -1,16 +1,29 @@
 {
-  "name": "somas-showcase",
-  "version": "1.0.0",
+  "name": "somas-concept-community",
   "private": true,
+  "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "build": "node scripts/check.mjs",
-    "test": "node --test",
-    "setup": "node scripts/setup.mjs",
+    "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "test": "node --test tests/*.test.js",
+    "diagnose:database": "node scripts/check-database.mjs",
+    "check": "npm test && node scripts/check-syntax.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0"
   },
   "devDependencies": {
-    "wrangler": "4.119.0"
+    "@electric-sql/pglite": "^0.3.14",
+    "esbuild": "^0.28.2",
+    "miniflare": "5.20261019.1-beta",
+    "pg": "^8.23.1",
+    "wrangler": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   }
 }

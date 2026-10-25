@@ -1,6 +1,13 @@
 node_modules/
-.wrangler/
 .dev.vars
 .env
 .env.*
+!.dev.vars.example
+.wrangler/
+playwright-report/
+test-results/
+.DS_Store
 *.log
+
+.next/
+.sites-runtime/

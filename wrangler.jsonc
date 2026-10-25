@@ -1,8 +1,25 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "somas-cloudflare-neon",
-  "main": "worker.mjs",
-  "compatibility_date": "2026-10-23",
-  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*", "/owner", "/inbox.html"] },
-  "d1_databases": [{ "binding": "DB", "database_name": "somas-showcase-feedback", "database_id": "REPLACE_WITH_D1_DATABASE_ID" }]
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-21",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/s/*",
+      "/health",
+      "/discussions/*",
+      "/platform/managers/*",
+      "/idea/*"
+    ]
+  },
+  "vars": {
+    "PLATFORM_NAME": "SOMAS",
+    "AUTH_V4_ENABLED": "true"
+  },
+  "triggers": {
+    "crons": []
+  }
 }

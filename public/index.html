@@ -1,1 +1,85 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090d14"><meta name="description" content="See a goal become a self-organizing AI team. Explore SOMAS through two interactive concept demonstrations."><title>SOMAS — Intelligence in motion</title><link rel="icon" href="/icon.svg"><link rel="stylesheet" href="/experience.css"><script type="module" src="/experience.js"></script></head><body><a class="skip" href="#main">Skip to demonstration</a><header><a class="brand" href="/">✳ <strong>SOMAS</strong><span>INTELLIGENCE IN MOTION</span></a><nav aria-label="Concept navigation"><a href="/team.html">AI organization</a><a href="/network.html">SOMAS network</a><button data-open="films">Watch films ▷</button></nav><span class="demo-badge"><i></i> CONCEPT DEMO</span></header><main id="main"></main><aside class="global-actions" aria-label="Share and feedback"><button class="share-action" data-open="share">↗ <span>Share the vision</span></button><button class="feedback-action" data-open="feedback">✉ <span>Give feedback</span></button></aside><dialog id="share"><button class="close" aria-label="Close share dialog">×</button><p class="eyebrow">IDEAS TRAVEL THROUGH PEOPLE</p><h2>Pass the spark.</h2><p>Share SOMAS with someone who thinks differently.</p><textarea id="share-copy" rows="4" aria-label="Editable social post"></textarea><div class="share-grid"><a id="facebook" target="_blank" rel="noopener">Facebook ↗</a><button id="native-share">Share on your device ↗</button><button id="instagram">Copy + open Instagram ↗</button><button id="youtube">Copy + open YouTube ↗</button><button id="copy">Copy post & link</button></div><p class="fine">You review and publish in the selected platform. Instagram and YouTube require you to create your own post; this page does not publish automatically.</p><p class="share-status" role="status"></p></dialog><dialog id="feedback"><button class="close" aria-label="Close feedback dialog">×</button><p class="eyebrow">BUILD THE FUTURE WITH US</p><h2>Your move.</h2><form id="contact-form"><label for="name">Name · optional</label><input id="name" name="name" maxlength="100" autocomplete="name"><label for="email">Your email</label><input id="email" type="email" name="email" required maxlength="254" autocomplete="email"><label for="interest">I'm interested in</label><select id="interest" name="interest"><option value="AI teams">AI organizations</option><option value="Network">SOMAS network</option><option value="Both">Both concepts</option><option value="Collaboration">Collaboration</option></select><label for="message">Your perspective</label><textarea id="message" name="message" minlength="10" maxlength="4000" rows="3" required placeholder="What would you build?"></textarea><div class="trap" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off" aria-label="Leave empty"></div><label class="consent"><input type="checkbox" name="consent" required>Store my email and message to respond to this inquiry.</label><button class="primary" type="submit">Send perspective ↗</button><p id="form-status" role="status"></p><a class="fine" href="/privacy.html">Privacy</a> <a class="fine" href="mailto:williamkevin999999@gmail.com">Email the founder ↗</a></form></dialog><dialog id="films"><button class="close" aria-label="Close films dialog">×</button><p class="eyebrow">OUR FUTURE WITH AI</p><h2>Watch the vision.</h2><div class="film-picker"><button data-video="Dg7Pd0UEOP8">▷ Vision film 01</button><button data-video="HkwzQq3NyHc">▷ Vision film 02</button></div><div id="player"><span>Choose a film to begin.</span></div><a id="video-fallback" href="https://youtu.be/Dg7Pd0UEOP8" target="_blank" rel="noopener">Watch on YouTube ↗</a></dialog><footer>SIMULATED ACTIONS · NO LIVE AGENTS OR BLOCKCHAIN <a href="/privacy.html">Privacy</a></footer></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f8fbff" />
+    <meta
+      name="description"
+      content="Our future with AI. Explore self-organizing AI organizations and a proposed network connecting them. An interactive SOMAS concept exhibition."
+    />
+    <title>OUR FUTURE WITH AI — SOMAS</title>
+    <link rel="stylesheet" href="/exhibition/theme.css" />
+    <link rel="stylesheet" href="/exhibition/world.css" />
+    <link rel="stylesheet" href="/exhibition/dataset.css" />
+    <link rel="stylesheet" href="/exhibition/community.css" />
+    <script type="module" src="/exhibition/main.js"></script>
+  <link rel="stylesheet" href="/exhibition/v3.css" /><link rel="stylesheet" href="/exhibition/account-v4.css" /></head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <div class="demo-banner">
+      DEMO VERSION — SOMAS is currently demonstrating its future vision. Agent
+      activities, project evolution, and blockchain information may be
+      simulated.
+    </div>
+    <div class="app-shell">
+      <aside class="side" id="sidebar">
+        <a href="/" class="brand"
+          ><span class="brand-mark">S</span>SOMAS<span class="brand-dot"></span
+        ></a>
+        <p class="side-label">EXPLORE THE FUTURE</p>
+        <nav id="navigation" aria-label="Public navigation"></nav>
+        <div class="sidebar-end">
+          <a href="/account/">Community account ↗</a
+          ><small>Two Ideas.<br />One Possible Future.</small>
+        </div>
+      </aside>
+      <div class="page-shell">
+        <header class="topbar">
+          <button
+            id="menu"
+            class="icon-button"
+            aria-label="Toggle navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            ☰</button
+          ><span
+            >THE SOMAS EXHIBITION <b>/</b>
+            <span id="breadcrumb">Dashboard</span></span
+          ><span class="concept-label">◈ INTERACTIVE CONCEPT</span>
+        </header>
+        <main id="content" tabindex="-1"></main>
+        <footer>
+          OUR FUTURE WITH AI <span>Two Ideas. One Possible Future.</span
+          ><a href="/privacy/">Privacy</a>
+        </footer>
+      </div>
+    </div>
+    <div class="global-actions">
+      <button data-share>↗ Share the vision</button
+      ><a href="/contact/">✎ Give feedback</a>
+    </div>
+    <dialog id="share-dialog">
+      <button class="dialog-close" aria-label="Close sharing">×</button>
+      <p class="eyebrow">LET THE IDEA TRAVEL</p>
+      <h2>Share a possible future.</h2>
+      <textarea id="share-text" aria-label="Social post" rows="4"></textarea>
+      <div class="share-links">
+        <a id="fb-share" target="_blank" rel="noopener">Facebook ↗</a
+        ><button id="native-share">Share on your device ↗</button
+        ><a href="https://www.instagram.com/" target="_blank" rel="noopener"
+          >Instagram ↗</a
+        ><a href="https://www.youtube.com/" target="_blank" rel="noopener"
+          >YouTube ↗</a
+        >
+      </div>
+      <button id="copy-share" class="primary">Copy post & link</button>
+      <p class="muted fine">
+        Copy the post, open your platform, and review before publishing. No
+        automatic social posting or account access.
+      </p>
+      <p id="share-status" role="status"></p>
+    </dialog>
+  </body>
+</html>

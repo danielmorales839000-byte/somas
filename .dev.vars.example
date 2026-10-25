@@ -1,0 +1,11 @@
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+AUTH_V4_ENABLED="true"
+# Server-only settings. See docs/V4_SETUP.md. Never commit actual credentials.
+ADMIN_USER_ID=""
+SOMAS_OWNER_EMAIL=""
+GOOGLE_OAUTH_CLIENT_ID=""
+GOOGLE_OAUTH_CLIENT_SECRET=""
+GOOGLE_OAUTH_REDIRECT_URI=""
+GOOGLE_CREDENTIAL_ENCRYPTION_KEY=""
+GOOGLE_CALENDAR_ID="primary"
+OTP_HMAC_KEY=""
