@@ -55,7 +55,7 @@ test("applications validate all required information and consent", () => {
   assert.ok(validateSubmission({ ...valid(), consent: false }, "contact"));
   assert.ok(validateSubmission({ ...valid(), id: "invalid" }, "contact"));
 });
-test("all exhibition pages have persistent disclaimer and separate community accounts", async () => {
+test("public pages remove the top banner and retain account service styles", async () => {
   for (const route of [
     "index.html",
     "idea/index.html",
@@ -67,8 +67,8 @@ test("all exhibition pages have persistent disclaimer and separate community acc
     "join/index.html",
   ]) {
     const s = await readFile("public/" + route, "utf8");
-    assert.match(s, /DEMO VERSION/);
-    assert.match(s, /account\//);
+    assert.doesNotMatch(s, /class="demo-banner"/);
+    assert.doesNotMatch(s, /Community account ↗/);
     assert.match(s, /exhibition\/main.js/);
   }
   assert.match(await readFile("public/account/index.html", "utf8"), /community.css/);

@@ -1,3 +1,7 @@
+# SOMAS v4.1 — calendar and navigation update
+
+See `docs/V41_RELEASE.md` for this update. Existing v4 owner/Google setup remains required.
+
 # SOMAS v4 — identity, controlled roles and scheduling
 
 Read `docs/V4_SETUP.md` BEFORE deployment. Migration 006 and owner bootstrap are required. Live Gmail/Calendar behavior requires owner Google authorization and has not been verified in this delivery.
