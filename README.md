@@ -1,3 +1,7 @@
+# SOMAS v5.1 — Organization Studio dashboard
+
+The dashboard now adapts the supplied terminal-style reference to the existing SOMAS light template: selectable agent roster, animated 2D team, scenario metrics, project evolution, agent profile, Network gateway and evidence log. See [dashboard release notes](docs/DASHBOARD_STUDIO.md).
+
 # SOMAS v5 — 2D concept exhibition
 
 The current release replaces the core 3D scenes with original SVG cartoon teams and a Canvas 2D network map. All agent and blockchain activity is simulated. Real community, account, private contact and booking features remain. See [v5 release notes](docs/V5_2D_RELEASE.md).
