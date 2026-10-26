@@ -862,10 +862,8 @@ if(pageStrip && navigationToggle){
   pageStrip.hidden=true;
 }
 
-if(requestedPath==='/about/'){
- document.title='About — SOMAS';
- fetch('/exhibition/about-content.html').then(r=>{if(!r.ok)throw Error();return r.text();}).then(html=>{$('#content').innerHTML=html;}).catch(()=>{$('#content').textContent='About document could not load. Please refresh.';});
-}
+if(requestedPath==='/about/')location.replace('/');
+const notice=document.createElement('div');notice.className='v5-demo-banner';notice.textContent='Concept demo · AI teams, learning and network activity are simulated. Accounts, messages and bookings are real.';document.body.prepend(notice);
 
 const feedbackAction=document.querySelector('.global-actions a[href="/contact/"]');
 if(feedbackAction&&!document.querySelector('.global-actions .schedule-action')){

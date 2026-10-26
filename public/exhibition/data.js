@@ -6,7 +6,6 @@ export const nav = [
   ["/videos/", "Videos", "play"],
   ["/discussions/", "Discussions", "chat"],
   ["/contact/", "Contact Us", "mail"],
-  ["/about/", "About", "spark"],
 ];
 export const agents = [
   [

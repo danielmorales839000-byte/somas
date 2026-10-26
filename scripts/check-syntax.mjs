@@ -1,8 +1,4 @@
-import { readdir } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
-for (const dir of ["src", "public/exhibition", "scripts"])
-  for (const file of await readdir(dir))
-    if (/\.(js|mjs)$/.test(file))
-      execFileSync(process.execPath, ["--check", dir + "/" + file], {
-        stdio: "inherit",
-      });
+import { readdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+async function check(dir){for(const item of await readdir(dir,{withFileTypes:true})){const file=dir+'/'+item.name;if(item.isDirectory()){if(!['dataset','vendor'].includes(item.name))await check(file);}else if(/\.(js|mjs)$/.test(item.name))execFileSync(process.execPath,['--check',file],{stdio:'inherit'});}}
+for(const dir of ['src','public/exhibition','scripts'])await check(dir);

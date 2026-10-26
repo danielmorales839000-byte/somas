@@ -1,3 +1,4 @@
+import {v5Markup,mountV5} from './v5/pages.js';
 import { datasetMarkup } from "./dataset-ui.js";
 import { activityAt, STEP_MS } from "./activity.js";
 import { inquiryId } from "./identity.js";
@@ -25,6 +26,7 @@ const stage = (kind) =>
 const transport = (fast = false) =>
   `<div class="world-transport"><button data-control="play">Ⅱ Pause</button><button data-control="replay">↺ Replay</button><button data-control="previous" aria-label="Previous event">←</button><button data-control="next" aria-label="Next event">→</button><label>Speed <select id="world-speed"><option value="0.5">0.5×</option><option value="1" ${fast ? "" : "selected"}>1×</option><option value="2">2×</option><option value="5" ${fast ? "selected" : ""}>5×</option></select></label><div class="transport-spacer"></div><button data-control="zoom-in" aria-label="Zoom in">＋</button><button data-control="zoom-out" aria-label="Zoom out">−</button><button data-control="pan-left" aria-label="Pan left">⇤</button><button data-control="pan-right" aria-label="Pan right">⇥</button><button data-control="reset">Reset camera</button></div>`;
 export function designedPage(path, original) {
+  const modern=v5Markup(path);if(modern!==null)return modern;
   if (path === "/examples/")
     return (
       title(
@@ -78,6 +80,8 @@ export function designedPage(path, original) {
   return original;
 }
 export async function mountWorldUI(path) {
+  document.body.classList.add("spatial-exhibition");
+  if(["/","/root-somas/","/platform/root-manager/","/network/"].includes(path))return mountV5(path);
   document.body.classList.add("spatial-exhibition");
   if (["/root-somas/", "/network/"].includes(path))
     document.body.classList.add("kinetic-page");

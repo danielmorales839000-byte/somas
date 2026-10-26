@@ -1,3 +1,7 @@
+# SOMAS v5 — 2D concept exhibition
+
+The current release replaces the core 3D scenes with original SVG cartoon teams and a Canvas 2D network map. All agent and blockchain activity is simulated. Real community, account, private contact and booking features remain. See [v5 release notes](docs/V5_2D_RELEASE.md).
+
 # SOMAS v4.1 — calendar and navigation update
 
 See `docs/V41_RELEASE.md` for this update. Existing v4 owner/Google setup remains required.
