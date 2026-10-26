@@ -1,3 +1,4 @@
+import {mountContactInbox} from './contact-inbox.js';
 import {mountSharing} from './sharing.js';
 import { mountV4 } from "./account-v4.js";
 import { mountV3 } from "./v3.js";
@@ -47,7 +48,8 @@ if(path === "/platform/root-manager/") path = "/root-somas/";
 let current = nav.find((n) => n[0] === path);
 if (path.startsWith("/discussions/"))
   current = nav.find((n) => n[0] === "/discussions/");
-$("#navigation").innerHTML = nav
+const adminMode=requestedPath==='/admin/'||requestedPath==='/owner/'||requestedPath==='/discussions/moderation/';
+$("#navigation").innerHTML = (adminMode ? [["/admin/","Overview","grid"],["/discussions/moderation/","Moderation","chat"]] : nav)
   .map(
     ([url, name, id]) =>
       `<a href="${url}" class="${path === url || url === current?.[0] ? "active" : ""}" ${path === url || url === current?.[0] ? 'aria-current="page"' : ""}>${icon(id)}${name}</a>`,
@@ -759,6 +761,7 @@ if ($("#public-form")) {
         "Thank you. Your " +
         (join ? "application" : "message") +
         " has been saved privately for review.";
+      if(!join)dispatchEvent(new Event('somas:contact-saved'));
       form.reset();
       id = inquiryId();
     } catch (e) {
@@ -868,3 +871,5 @@ const feedbackAction=document.querySelector('.global-actions a[href="/contact/"]
 if(feedbackAction&&!document.querySelector('.global-actions .schedule-action')){
  const schedule=document.createElement('a');schedule.className='schedule-action';schedule.href='/meet/';schedule.textContent='◷ Schedule a Meeting';feedbackAction.before(schedule);
 }
+
+if(requestedPath==='/contact/')mountContactInbox();

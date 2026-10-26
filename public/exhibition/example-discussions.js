@@ -385,3 +385,12 @@ export const exampleDiscussions = [
     "body": "What would make the organization graph usable without a mouse or a 3D display?\n\nProvide a keyboard-accessible team list with the same roles, task states, and evidence as the visual view.\n\nHow should feedback influence the next iteration without automatically changing production?"
   }
 ];
+
+for(const [index,thread] of exampleDiscussions.entries()){
+ const topic=thread.title.split(':')[0],angle=thread.title.split(':')[1].trim();
+ thread.replies=[
+  {author:'Virtual reviewer '+String(index+1).padStart(2,'0'),body:`For ${topic.toLowerCase()}, the ${angle} should be tied to one concrete outcome. I would ask the owner to define what success looks like before the Manager assigns work.`},
+  {author:thread.author,body:`That helps. My starting point is: ${thread.body.split('\n\n')[1]} What evidence should we retain so the owner can review the decision later?`},
+  {author:'Virtual collaborator '+String(index+1).padStart(2,'0'),body:`For this ${topic.toLowerCase()} example, keep the request, proposed action, permission decision, and test result together. A human should be able to inspect or stop the workflow. The animation itself is not evidence that work succeeded.`}
+ ];
+}

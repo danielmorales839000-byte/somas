@@ -1,109 +1,34 @@
-import { api } from "./community.js";
-const esc = (s) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-export function adminMarkup() {
-  return `<div class="admin-title"><h1>Admin panel</h1><span class="source-chip">PRIVATE · REAL RECORDS</span></div><a class="secondary" href="/examples/">Explore synthetic examples separately ↗</a><p id="admin-notice" role="status">Checking administrator access…</p><div id="admin-workspace" hidden><div class="admin-summary" id="admin-summary"></div><section id="admin-analysis"></section><nav class="world-mode" aria-label="Administrator sections"><button data-admin-tab="messages">Messages</button><button data-admin-tab="meetings">Meeting requests</button><button data-admin-tab="calendar">Scheduled meetings</button><button data-admin-tab="feedback">Feedback / contact</button><button data-admin-tab="users">Users</button><a class="secondary" href="/discussions/moderation/">Discussion moderation ↗</a></nav><label class="admin-search">Search loaded records <input id="admin-search" placeholder="Name, email, message…"></label><div id="admin-records"></div></div><p class="fine muted">Use your community account to sign in. Administrator access is checked on the server.</p><a href="/account/" class="secondary">Community account ↗</a>`;
-}
-export async function mountAdmin() {
-  const $ = (s) => document.querySelector(s);
-  try {
-    const data = await api("/api/admin/workspace");
-    $("#admin-notice").textContent =
-      "Authorized private view · latest 100 records per list. Visitor analytics are not collected.";
-    $("#admin-workspace").hidden = false;
-    $("#admin-summary").innerHTML = [
-      ["Registered users", data.stats.users],
-      ["Private inquiries", data.stats.messages],
-      ["Meeting requests", data.stats.meetings],
-      ["Upcoming confirmed", data.overview?.totals.upcoming ?? "Unavailable"],
-    ]
-      .map(
-        ([k, v]) =>
-          `<div class="panel"><small>${k}</small><strong>${v}</strong></div>`,
-      )
-      .join("");
-    if(data.overview){
-      const o=data.overview,t=o.totals;
-      const bars=(items,label)=>`<div class="metric-breakdown" aria-label="${label}">${items.map(x=>`<div><span>${esc(x.label)}</span><meter min="0" max="${Math.max(1,...items.map(x=>Number(x.count)))}" value="${Number(x.count)}">${Number(x.count)}</meter><strong>${Number(x.count)}</strong></div>`).join('')}</div>`;
-      $('#admin-analysis').innerHTML=`<div class="admin-summary">${[['Verified accounts',t.verified],['Restricted accounts',t.restricted],['Visible discussions',t.discussions],['Visible replies',t.replies],['Inquiries needing review',t.awaiting_review],['Failed email attempts',t.failed_emails]].map(([k,v])=>`<div class="panel"><small>${k}</small><strong>${Number(v)}</strong></div>`).join('')}</div><div class="admin-chart-grid"><section class="panel"><h2>Activity · last 30 days</h2><label>Measure <select id="admin-trend"><option value="users">New accounts</option><option value="inquiries">New inquiries</option><option value="discussions">New discussions</option></select></label><div id="admin-bars"></div><p class="fine">Daily counts use UTC. Totals above cover all time; lists show the latest 100. Virtual examples are excluded.</p></section><section class="panel"><h2>Account roles</h2>${bars(o.roles.map(x=>({label:x.role,count:x.count})),'Account roles')}<h2>Inquiry review queue</h2>${bars(o.statuses.map(x=>({label:x.status,count:x.count})),'Inquiry statuses')}<a href="/owner/">Role requests and owner settings ↗</a></section></div>`;
-      const trend=()=>{const k=$('#admin-trend').value,max=Math.max(1,...o.daily.map(x=>Number(x[k])));$('#admin-bars').innerHTML=`<div class="daily-bars" aria-label="Daily ${k}">${o.daily.map(x=>`<div title="${esc(x.day)}: ${Number(x[k])}"><i style="height:${Number(x[k])/max*100}%"></i></div>`).join('')}</div><details><summary>View daily counts</summary><table><thead><tr><th>Date (UTC)</th><th>Count</th></tr></thead><tbody>${o.daily.map(x=>`<tr><td>${esc(x.day)}</td><td>${Number(x[k])}</td></tr>`).join('')}</tbody></table></details>`;};$('#admin-trend').onchange=trend;trend();
-    }
-    let tab = "messages";
-    const render = () => {
-      const q = $("#admin-search").value.toLowerCase();
-      document
-        .querySelectorAll("[data-admin-tab]")
-        .forEach((b) =>
-          b.classList.toggle("selected", b.dataset.adminTab === tab),
-        );
-      if(tab==='calendar'){
-        $('#admin-records').innerHTML=(data.overview?.meetings||[]).filter(m=>JSON.stringify(m).toLowerCase().includes(q)).map(m=>`<article class="panel admin-record"><span class="source-chip">${esc(m.state)}</span><h3>${esc(m.guest_name)}</h3><p>${esc(m.guest_email)}</p><p>${esc(new Date(m.starts_at).toLocaleString())} – ${esc(new Date(m.ends_at).toLocaleTimeString())} · your browser timezone</p><p>${esc(m.purpose)}</p><a href="/meet/?id=${esc(m.id)}">Review meeting ↗</a></article>`).join('')||'<p>No matching scheduled meetings.</p>';return;
-      }
-      if (tab === "users") {
-        $("#admin-records").innerHTML =
-          data.users
-            .filter((u) =>
-              (u.display_name + " " + u.email).toLowerCase().includes(q),
-            )
-            .map(
-              (u) =>
-                `<article class="admin-record panel"><h3>${esc(u.display_name || "Member")}</h3><p>${esc(u.email)}</p><small>Registered ${esc(new Date(u.created_at).toLocaleString())} · ${u.suspended ? "Restriction recorded" : "No restriction recorded"}</small><p class="fine muted">${u.role?`Role: ${esc(u.role)} · ${u.verified_at?"Verified":"Not verified"} · ${esc(u.account_status)} · Last sign-in: ${esc(u.last_login_at?new Date(u.last_login_at).toLocaleString():"Not recorded")}`:"Last-login history not available in legacy mode."} Country and contact preference are not collected.</p></article>`,
-            )
-            .join("") || "<p>No matching users.</p>";
-        return;
-      }
-      const rows = data.submissions
-        .filter((r) => Boolean(r.payload.meeting) === (tab === "meetings"))
-        .filter(r=>tab!=="feedback"||r.kind==="contact")
-        .filter((r) => JSON.stringify(r.payload).toLowerCase().includes(q));
-      $("#admin-records").innerHTML =
-        rows
-          .map((r) => {
-            const p = r.payload,
-              m = p.meeting;
-            return `<article class="admin-record panel"><div><span class="source-chip">${esc(p.reviewStatus || m?.status || "new")}</span><h3>${esc(p.name)} / ${esc(m ? "Meeting request" : p.subject || "Application")}</h3><p>${esc(p.email)} · ${esc(new Date(r.created_at).toLocaleString())}</p></div><p class="application-message">${esc(p.message)}</p>${m ? `<p>Requested: ${esc(new Date(m.startsAt).toLocaleString(undefined, { timeZone: m.timezone }))} (${esc(m.timezone)})</p><p class="fine muted">${esc(m.startsAt)} UTC reference. Confirmation is an internal record; no invitation or email is sent.</p>` : ""}${p.roles ? `<p>Contribution: ${esc(p.roles.join(", "))} · ${esc(p.country)} / ${esc(p.city)}</p><p>${esc(p.about)}</p>` : ""}<label>Review status <select data-review="${r.id}">${(m ? ["requested", "reviewing", "confirmed", "cancelled"] : ["new", "reviewing", "responded", "closed"]).map((s) => `<option ${s === (p.reviewStatus || m?.status || "new") ? "selected" : ""}>${s}</option>`).join("")}</select></label><details><summary>Private audit history (${p.adminHistory?.length || 0})</summary>${(p.adminHistory || []).map((h) => `<p class="fine">${esc(h.status)} · ${esc(h.at)}</p>`).join("") || '<p class="fine">No status changes recorded.</p>'}</details></article>`;
-          })
-          .join("") || "<p>No matching records.</p>";
-      document.querySelectorAll("[data-review]").forEach(
-        (s) =>
-          (s.onchange = async () => {
-            s.disabled = true;
-            try {
-              await api("/api/admin/workspace/" + s.dataset.review, "PATCH", {
-                status: s.value,
-              });
-              const r = data.submissions.find((r) => r.id === s.dataset.review);
-              r.payload.reviewStatus = s.value;
-              (r.payload.adminHistory ||= []).push({
-                status: s.value,
-                at: new Date().toISOString(),
-              });
-              $("#admin-notice").textContent =
-                "Review status saved. No email or calendar invitation was sent.";
-              render();
-            } catch (e) {
-              $("#admin-notice").textContent = e.message;
-              s.disabled = false;
-            }
-          }),
-      );
-    };
-    document.querySelectorAll("[data-admin-tab]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          tab = b.dataset.adminTab;
-          render();
-        }),
-    );
-    $("#admin-search").oninput = render;
-    render();
-  } catch (e) {
-    $("#admin-notice").textContent = e.message;
-  }
+import {renderContactThread} from './contact-inbox.js';
+import {api} from './community.js';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const date=v=>v?new Date(v).toLocaleString():'Not recorded';
+export function adminMarkup(){return `<div class="admin-title"><h1>Admin panel</h1><span class="source-chip">PRIVATE · REAL RECORDS</span></div><p id="admin-notice" role="status">Checking access…</p><div id="admin-workspace" hidden><section id="admin-analysis"></section><nav class="world-mode" aria-label="Administrator sections">${[['users','Users'],['messages','Messages'],['feedback','Feedback / contact'],['meetings','Meeting requests'],['calendar','Scheduled meetings']].map(([id,name])=>`<button data-admin-tab="${id}">${name}</button>`).join('')}</nav><label class="admin-search">Search loaded records<input id="admin-search" placeholder="Name, email, message…"></label><div id="admin-records"></div></div>`;}
+export function detailRows(record){return Object.entries(record).map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v??'Not recorded')}</dd></div>`).join('');}
+export async function mountAdmin(){
+ const $=s=>document.querySelector(s);
+ const dialog=document.createElement('dialog');dialog.className='admin-detail-dialog';dialog.setAttribute('aria-labelledby','admin-detail-title');dialog.innerHTML='<button class="dialog-close" aria-label="Close details">×</button><h2 id="admin-detail-title"></h2><dl id="admin-detail-body"></dl><div id="admin-detail-actions"></div><p id="admin-detail-status" role="status"></p>';document.body.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();
+ const show=(title,info,submission=null,meeting=null)=>{
+  dialog.querySelector('h2').textContent=title;dialog.querySelector('dl').innerHTML=detailRows(info);dialog.querySelector('#admin-detail-status').textContent='';const actions=dialog.querySelector('#admin-detail-actions');actions.replaceChildren();
+  if(meeting){const a=document.createElement('a');a.className='secondary';a.href='/meet/?id='+encodeURIComponent(meeting.id);a.textContent='Review calendar meeting ↗';actions.append(a);}
+  if(submission){const p=submission.payload,m=p.meeting;const label=document.createElement('label');label.textContent='Review status';const select=document.createElement('select');for(const value of (m?['requested','reviewing','confirmed','cancelled']:['new','reviewing','responded','closed'])){const option=document.createElement('option');option.value=value;option.textContent=value;option.selected=value===(p.reviewStatus||m?.status||'new');select.append(option);}label.append(select);actions.append(label);select.onchange=async()=>{select.disabled=true;try{await api('/api/admin/workspace/'+submission.id,'PATCH',{status:select.value});p.reviewStatus=select.value;(p.adminHistory||=[]).push({status:select.value,at:new Date().toISOString()});dialog.querySelector('#admin-detail-status').textContent='Saved. No email or Calendar event was sent.';$('#admin-notice').textContent='Review saved. Refresh this page to update aggregate totals.';render();}catch(e){dialog.querySelector('#admin-detail-status').textContent=e.message;}finally{select.disabled=false;}};}
+  if(submission?.kind==='contact'){const conversation=document.createElement('section');actions.append(conversation);renderContactThread(conversation,submission.id);}
+  dialog.showModal();
+ };
+ const table=(caption,headers,rows,open)=>{const wrap=document.createElement('div');wrap.className='panel admin-data-table';wrap.innerHTML=`<div class="admin-table-scroll"><table><caption>${esc(caption)}</caption><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((row,i)=>`<tr data-row="${i}">${row.map((v,j)=>`<td>${j===0?`<button class="table-detail-button">${esc(v)}</button>`:esc(v)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">No matching records.</td></tr>`}</tbody></table></div>`;wrap.querySelectorAll('[data-row]').forEach(tr=>tr.onclick=()=>open(Number(tr.dataset.row)));return wrap;};
+ let data,tab='users';
+ const render=()=>{
+  const q=$('#admin-search').value.toLowerCase();document.querySelectorAll('[data-admin-tab]').forEach(b=>{b.classList.toggle('selected',b.dataset.adminTab===tab);b.setAttribute('aria-pressed',String(b.dataset.adminTab===tab));});
+  let view;
+  if(tab==='users'){const rows=data.users.filter(u=>JSON.stringify(u).toLowerCase().includes(q));view=table('Users · latest 100',['Name','Email','Role','Status','Registered'],rows.map(u=>[u.display_name||'Member',u.email,u.role||'member',u.account_status||'active',date(u.created_at)]),i=>{const u=rows[i];show(u.display_name||'Member',{'Email':u.email,'Role':u.role,'Status':u.account_status,'Verified':u.verified_at?'Yes':'No','Registered':date(u.created_at),'Last sign-in':date(u.last_login_at),'Community restriction':u.suspended?'Restricted':'None'});});}
+  else if(tab==='calendar'){const rows=(data.overview?.meetings||[]).filter(m=>JSON.stringify(m).toLowerCase().includes(q));view=table('Scheduled meetings · latest 100',['Guest','Email','Start','State'],rows.map(m=>[m.guest_name,m.guest_email,date(m.starts_at),m.state]),i=>{const m=rows[i];show('Scheduled meeting',{'Guest':m.guest_name,'Email':m.guest_email,'Topic':m.purpose,'Starts':date(m.starts_at),'Ends':date(m.ends_at),'Booking timezone':m.zone,'State':m.state},null,m);});}
+  else{const rows=data.submissions.filter(r=>Boolean(r.payload.meeting)===(tab==='meetings')).filter(r=>tab!=='feedback'||r.kind==='contact').filter(r=>JSON.stringify(r.payload).toLowerCase().includes(q));view=table(tab==='meetings'?'Meeting requests':tab==='feedback'?'Feedback / contact':'Messages and contributor inquiries',['From','Subject','Email','Status','Received'],rows.map(r=>[r.payload.name,r.payload.subject||r.kind,r.payload.email,r.payload.reviewStatus||r.payload.meeting?.status||'new',date(r.created_at)]),i=>{const r=rows[i],p=r.payload;show(p.subject||'Inquiry',{'From':p.name,'Email':p.email,'Message':p.message,'Contribution roles':p.roles?.join(', ')||'Not applicable','About':p.about||'Not provided','Location':[p.city,p.country].filter(Boolean).join(', ')||'Not provided','Meeting requested':p.meeting?date(p.meeting.startsAt)+' · '+p.meeting.timezone:'No','History':(p.adminHistory||[]).map(h=>h.status+' · '+h.at).join('\n')||'No changes'},r);});}
+  $('#admin-records').replaceChildren(view);
+ };
+ try{
+  data=await api('/api/admin/workspace');$('#admin-workspace').hidden=false;$('#admin-notice').textContent='Private database analysis · totals cover all time · lists show latest 100 · example discussions excluded.';
+  const o=data.overview,t=o?.totals||{},metrics=[['Registered users',data.stats.users,'All accounts'],['Verified accounts',t.verified,'Email verified'],['Restricted accounts',t.restricted,'Account status is not active'],['Private inquiries',data.stats.messages,'Non-meeting submissions'],['Inquiries needing review',t.awaiting_review,'New or reviewing'],['Visible discussions',t.discussions,'Real database posts'],['Visible replies',t.replies,'Real database replies'],['Meeting requests',data.stats.meetings,'Inquiry requests, not Calendar events'],['Upcoming confirmed meetings',t.upcoming,'Confirmed Calendar records in the future'],['Failed email attempts',t.failed_emails,'Failed provider delivery attempts']];
+  const analysis=$('#admin-analysis');analysis.append(table('Service overview',['Metric','Count','Definition'],metrics.map(x=>[x[0],x[1]??'Unavailable',x[2]]),i=>show(metrics[i][0],{'Count':metrics[i][1]??'Unavailable','Definition':metrics[i][2],'Coverage':'All-time database total','Examples':'Fictional discussion examples excluded'})));
+  if(o){const grid=document.createElement('div');grid.className='admin-table-grid';grid.append(table('Daily activity · 30 days · UTC',['Day','New accounts','Inquiries','Discussions'],o.daily.map(d=>[d.day,d.users,d.inquiries,d.discussions]),i=>show('Activity · '+o.daily[i].day,{'Date (UTC)':o.daily[i].day,'New accounts':o.daily[i].users,'New inquiries':o.daily[i].inquiries,'New discussions':o.daily[i].discussions})),table('Account roles',['Role','Accounts'],o.roles.map(x=>[x.role,x.count]),i=>show('Role: '+o.roles[i].role,{'Role':o.roles[i].role,'Accounts':o.roles[i].count})),table('Inquiry review queue',['Status','Inquiries'],o.statuses.map(x=>[x.status,x.count]),i=>show('Review status: '+o.statuses[i].status,{'Status':o.statuses[i].status,'Inquiries':o.statuses[i].count})));analysis.append(grid);}
+  document.querySelectorAll('[data-admin-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.adminTab;render();});$('#admin-search').oninput=render;render();
+ }catch(e){$('#admin-notice').textContent=e.message;}
 }

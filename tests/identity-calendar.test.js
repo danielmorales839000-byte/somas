@@ -12,6 +12,7 @@ const password='fixture-long-password-123';
 const base='https://somas.example';
 test('v4 identity, roles and Calendar execute actual SQL with mocked Google endpoints',async t=>{
  const pg=await postgresEngine();neonConfig.fetchFunction=pg.fetch;await pg.db.exec(await readFile(new URL('../db/006_identity_calendar.sql',import.meta.url),'utf8'));
+ await pg.db.exec(await readFile(new URL('../db/007_contact_conversations.sql',import.meta.url),'utf8'));
  const env={DATABASE_URL:'postgresql://fixture:fixture@ep-fixture.us-east-2.aws.neon.tech/db',AUTH_V4_ENABLED:'true',ADMIN_USER_ID:'owner-fixture',SOMAS_OWNER_EMAIL:'owner@example.test',OTP_HMAC_KEY:'a'.repeat(64),GOOGLE_CREDENTIAL_ENCRYPTION_KEY:'1'.repeat(64),GOOGLE_OAUTH_CLIENT_ID:'fixture-client',GOOGLE_OAUTH_CLIENT_SECRET:'fixture-secret',GOOGLE_OAUTH_REDIRECT_URI:base+'/api/owner/google/callback',GOOGLE_CALENDAR_ID:'primary'};
  const mails=[],events=new Map();let failMail=false,failCalendar=false,failInsert=false,busyIntervals=[];const originalFetch=globalThis.fetch;
  globalThis.fetch=async(url,options={})=>{url=String(url);if(url.includes('/token'))return Response.json({access_token:'mock-access',refresh_token:'mock-refresh',scope:'openid email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.freebusy'});if(url.includes('userinfo'))return Response.json({email:env.SOMAS_OWNER_EMAIL,email_verified:true});if(url.includes('/revoke'))return new Response('',{status:200});if(url.includes('/messages/send')){if(failMail)return Response.json({error:'fixture'},{status:503});const raw=JSON.parse(options.body).raw;const mime=Buffer.from(raw.replaceAll('-','+').replaceAll('_','/'),'base64').toString();const text=Buffer.from(mime.split('\r\n\r\n')[1],'base64').toString();mails.push({mime,text});return Response.json({id:'mail-'+mails.length});}if(url.includes('/freeBusy')){if(failCalendar)return Response.json({error:'fixture'},{status:503});return Response.json({calendars:{primary:{busy:busyIntervals}}});}if(url.includes('/events')){const id=new URL(url).pathname.split('/').at(-1);if(options.method==='POST'){const e=JSON.parse(options.body);events.set(e.id,e);if(failInsert)throw Error('ambiguous transport timeout');return Response.json({...e,hangoutLink:'https://meet.google.com/abc-fixture-xyz'});}if(options.method==='DELETE'){events.delete(id);return new Response(null,{status:204});}if(events.has(id))return Response.json({...events.get(id),hangoutLink:'https://meet.google.com/abc-fixture-xyz'});return Response.json({error:'missing'},{status:404});}throw Error('Unexpected Google endpoint');};
@@ -42,6 +43,19 @@ test('v4 identity, roles and Calendar execute actual SQL with mocked Google endp
   const count=(await pg.db.query('SELECT count(*)::int AS n FROM users')).rows[0].n;
   assert.equal(result.body.stats.users,count);assert.equal(result.body.overview.meetings.length, (await pg.db.query('SELECT count(*)::int AS n FROM calendar_meetings')).rows[0].n);
   assert(!JSON.stringify(result.body).includes('password_hash'));assert(!JSON.stringify(result.body).includes('token_hash'));
+ });
+ await t.test('private contact conversations scope history by verified email and allow staff replies',async()=>{
+  const customer=await seed('inbox-customer'),outsider=await seed('inbox-outsider'),id=crypto.randomUUID();
+  await pg.db.query("INSERT INTO public_submissions(id,kind,payload) VALUES($1,'contact',$2::jsonb)",[id,JSON.stringify({name:'Inbox Customer',email:'inbox-customer@example.test',subject:'Private feedback',message:'Please explain the SOMAS demonstration.'})]);
+  assert.equal((await request('/api/contact/conversations')).r.status,401);
+  const list=await request('/api/contact/conversations','GET',null,customer);assert(list.body.threads.some(x=>x.id===id));
+  assert.equal((await request('/api/contact/conversations/'+id,'GET',null,outsider)).r.status,404);
+  assert.equal((await request('/api/contact/conversations/'+id,'POST',{body:'Forged reply'},outsider)).r.status,404);
+  const sent=await request('/api/contact/conversations/'+id,'POST',{body:'Thank you for your feedback.'},ownerCookie);assert.equal(sent.r.status,201);assert.equal(sent.body.notification,'accepted');
+  const answer=await request('/api/contact/conversations/'+id,'POST',{body:'Can you show a team example?',from_staff:true},customer);assert.equal(answer.r.status,201);
+  const history=await request('/api/contact/conversations/'+id,'GET',null,customer);assert.equal(history.body.replies.length,2);assert.equal(history.body.replies[0].from_staff,true);assert.equal(history.body.replies[1].from_staff,false);
+  assert(!JSON.stringify(history.body).includes('sender_user_id'));assert(!JSON.stringify(history.body).includes('password_hash'));
+  await pg.db.exec(await readFile(new URL('../db/007_contact_conversations.sql',import.meta.url),'utf8'));
  });
  await t.test('migration reapplication retains records and owner singleton constraint',async()=>{await pg.db.exec(await readFile(new URL('../db/006_identity_calendar.sql',import.meta.url),'utf8'));await assert.rejects(pg.db.query("UPDATE users SET role='owner' WHERE id='admin-one'"));assert((await pg.db.query('SELECT count(*)::int AS n FROM access_audit')).rows[0].n>0);});
  }finally{globalThis.fetch=originalFetch;await pg.close();}

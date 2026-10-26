@@ -14,7 +14,7 @@ export async function mountV4(path){let config;try{config=await api('/api/auth/c
  if(path==='/settings/')await settings(host);
  if(path==='/owner/')await ownerSettings(host);
  if(path==='/meet/')await meetingPage(host);
- try{const a=await api('/api/account');if(path==='/account/'&&!new URLSearchParams(location.search).get('mode')){location.replace('/settings/');return true;}header.innerHTML=`<span class="admin-user-pair">${a.isStaff?'<a class="admin-entry" href="/admin/">To admin panel ↗</a>':''}<a href="/settings/"><span class="user-avatar" aria-hidden="true">${esc(Array.from(a.profile.display_name||"U")[0].toUpperCase())}</span>${esc(a.profile.display_name)} · ${esc(a.role)}</a></span>${a.isOwner?'<a href="/owner/">Owner settings</a>':''}`;}catch{}
+ try{const a=await api('/api/account');if(path==='/account/'&&!new URLSearchParams(location.search).get('mode')){location.replace('/settings/');return true;}header.innerHTML=`<span class="admin-user-pair">${a.isStaff?(['/admin/','/owner/','/discussions/moderation/'].includes(path)?'<a class="admin-entry" href="/">To user panel ↗</a>':'<a class="admin-entry" href="/admin/">To admin panel ↗</a>'):''}<a href="/settings/"><span class="user-avatar" aria-hidden="true">${esc(Array.from(a.profile.display_name||"U")[0].toUpperCase())}</span>${esc(a.profile.display_name)} · ${esc(a.role)}</a></span>${a.isOwner?'<a href="/owner/">Owner settings</a>':''}`;}catch{}
  return true;
 }
 function renderAuth(host,mode=new URLSearchParams(location.search).get('mode')||'login'){

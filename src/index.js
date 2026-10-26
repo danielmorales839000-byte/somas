@@ -1,3 +1,4 @@
+import {contactConversations} from './contact-conversations.js';
 import { managers } from "./managers.js";
 import { v4,staff } from "./access.js";
 import { identityV4 } from "./identity-v4.js";
@@ -67,6 +68,7 @@ async function handle(request, env) {
       "request_origin_not_allowed",
       403,
     );
+  if(path.startsWith('/api/contact/conversations'))return contactConversations(request,env);
   if(path==='/api/auth/config' && method==='GET') return json({v4:v4(env),source:'real'});
   if(v4(env) && (path==='/api/managers'||path.startsWith('/api/managers/')))return managers(request,env);
   if(v4(env) && (path.startsWith('/api/auth/')||path.startsWith('/api/account')||path.startsWith('/api/owner/')||path.startsWith('/api/admin/role-requests'))){const r=await identityV4(request,env);if(r)return r;}
