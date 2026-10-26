@@ -22,3 +22,10 @@
 /* Screenshot-requested introductions removed; retain discussion creation action. */
 .community-hero{min-height:0!important;padding:0!important;margin:12px 0 20px!important;justify-content:flex-end}
 .spatial-home{padding-top:0!important}
+
+.user-avatar{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:#e3edff;color:#245cc5;border:1px solid #c9dbff;font-size:13px;font-weight:750;margin-right:8px}
+.about-document{max-width:980px;margin:0 auto;padding:clamp(22px,5vw,60px);line-height:1.8}.about-document h1{font-size:40px}.about-document h2{margin-top:38px;font-size:25px}.about-document p{margin:12px 0}.about-table{overflow:auto}.about-table td{padding:12px;border-bottom:1px solid #e1e8f1;vertical-align:top}.about-table tr:first-child{font-weight:700;background:#f0f5fc}
+.global-actions{flex-wrap:wrap;max-width:calc(100vw - 24px)}
+@media(max-width:600px){.global-actions{gap:6px!important}.global-actions a,.global-actions button{padding:10px 12px!important;font-size:12px!important}}
+
+.about-table table{width:100%;min-width:0;table-layout:fixed}.about-table td{white-space:normal!important;overflow-wrap:anywhere;font-size:14px;line-height:1.7}

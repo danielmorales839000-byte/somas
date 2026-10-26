@@ -1,3 +1,4 @@
+import {notifyOwner} from './owner-notifications.js';
 import { accessUser, v4, staff } from "./access.js";
 import { database, getUserFromSession } from "./database.js";
 import { sha256, sessionCookie } from "./auth.js";
@@ -142,7 +143,10 @@ export async function publicSubmissions(request, env) {
     // Quota and insertion share one statement. Repeated IDs never create duplicate records.
     const rows =
       await sql`WITH quota AS (INSERT INTO public_submission_limits (identity_hash,day,attempts) VALUES (${hash},${day}::date,1) ON CONFLICT(identity_hash,day) DO UPDATE SET attempts=public_submission_limits.attempts+1 RETURNING attempts), saved AS (INSERT INTO public_submissions(id,kind,payload) SELECT ${p.id}::uuid,${kind},${JSON.stringify(data)}::jsonb FROM quota WHERE attempts<=5 ON CONFLICT(id) DO NOTHING RETURNING id) SELECT (SELECT count(*)::int FROM saved) AS saved,(SELECT attempts FROM quota) AS attempts`;
-    if (rows[0]?.saved === 1) return response({ saved: true }, 201);
+    if (rows[0]?.saved === 1) {
+      const notification=await notifyOwner(sql,env,kind==='contact'?'New contact / feedback':'New contributor inquiry',JSON.stringify(data,null,2));
+      return response({ saved: true, notification }, 201);
+    }
     if (rows[0]?.attempts > 5)
       return response({ error: "daily_limit_reached" }, 429);
     return response({ error: "already_submitted" }, 409);

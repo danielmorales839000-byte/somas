@@ -1,3 +1,4 @@
+import {notifyOwner} from './owner-notifications.js';
 import { v4, accessUser, staff } from "./access.js";
 import { database, getUserFromSession } from "./database.js";
 import { sha256, sessionCookie } from "./auth.js";
@@ -329,7 +330,8 @@ export async function community(req, env) {
       sql`INSERT INTO community_discussions(id,profile_id,title,category,body,tags,official) SELECT ${id}::uuid,id,${v.title},${v.category},${v.body},${JSON.stringify(v.tags)}::jsonb,${!!p.official} FROM community_profiles WHERE id=${me.id}::uuid AND NOT suspended`,
       sql`INSERT INTO community_follows(profile_id,discussion_id) VALUES(${me.id}::uuid,${id}::uuid)`,
     ]);
-    return json({ id }, 201);
+    const notification=await notifyOwner(sql,env,'New discussion',`Author: ${me.display_name}\nTitle: ${v.title}\nCategory: ${v.category}\n\n${v.body}\n\n${url.origin}/discussions/${id}/`);
+    return json({ id, notification }, 201);
   }
   if (threadReplies && method === "POST") {
     const id = validId(threadReplies[1]),
@@ -342,7 +344,8 @@ export async function community(req, env) {
     const r =
       await sql`WITH posted AS(INSERT INTO community_replies(id,discussion_id,profile_id,body,official) SELECT ${rid}::uuid,d.id,${me.id}::uuid,${body},${!!p.official} FROM community_discussions d WHERE d.id=${id}::uuid AND d.status='visible' AND NOT d.locked AND EXISTS(SELECT 1 FROM community_profiles WHERE id=${me.id}::uuid AND NOT suspended) RETURNING id,discussion_id),activity AS(UPDATE community_discussions SET last_activity=now() WHERE id IN(SELECT discussion_id FROM posted) RETURNING id),notices AS(INSERT INTO community_notifications(recipient_id,discussion_id,reply_id,kind) SELECT f.profile_id,p.discussion_id,p.id,${p.official ? "official" : "reply"} FROM posted p JOIN community_follows f ON f.discussion_id=p.discussion_id WHERE f.profile_id<>${me.id}::uuid LIMIT 1000 ON CONFLICT DO NOTHING RETURNING id) SELECT id FROM posted`;
     requireThat(r.length, "discussion_unavailable_or_locked", 409);
-    return json({ id: rid }, 201);
+    const notification=await notifyOwner(sql,env,'New discussion reply',`Author: ${me.display_name}\n\n${body}\n\n${url.origin}/discussions/${id}/`);
+    return json({ id: rid, notification }, 201);
   }
   const item = sub.match(
     /^(discussions|replies)\/([0-9a-f-]+)(?:\/(vote|report|follow))?$/i,

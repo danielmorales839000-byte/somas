@@ -893,3 +893,13 @@ if(pageStrip && navigationToggle){
   document.body.append(navigationToggle);
   pageStrip.hidden=true;
 }
+
+if(requestedPath==='/about/'){
+ document.title='About — SOMAS';
+ fetch('/exhibition/about-content.html').then(r=>{if(!r.ok)throw Error();return r.text();}).then(html=>{$('#content').innerHTML=html;}).catch(()=>{$('#content').textContent='About document could not load. Please refresh.';});
+}
+
+const feedbackAction=document.querySelector('.global-actions a[href="/contact/"]');
+if(feedbackAction&&!document.querySelector('.global-actions .schedule-action')){
+ const schedule=document.createElement('a');schedule.className='schedule-action';schedule.href='/meet/';schedule.textContent='◷ Schedule a Meeting';feedbackAction.before(schedule);
+}

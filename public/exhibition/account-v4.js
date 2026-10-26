@@ -7,7 +7,7 @@ const fields=()=>'<label>Email<input name="email" type="email" autocomplete="ema
 const title=(tag,h)=>`<p class="eyebrow">${tag} / REAL ACCOUNT SERVICE</p><h1>${h}</h1>`;
 export async function mountV4(path){let config;try{config=await api('/api/auth/config');}catch{return false;}if(!config.v4)return false;
  const footer=document.querySelector('footer');if(footer&&!footer.querySelector('a[href="/terms/"]')){footer.insertAdjacentHTML('beforeend','<a href="/terms/">Terms</a><a href="/contact/">Contact</a><button type="button" class="text-button" id="footer-disclosure">Demo Disclosure</button>');footer.querySelector('#footer-disclosure').onclick=showDisclosure;}
- const header=document.createElement('div');header.className='identity-links auth-navigation';header.innerHTML='<a href="/account/">Sign in</a><a href="/account/?mode=signup">Sign up</a><a class="secondary" href="/meet/">Schedule a Meeting</a>';document.querySelector('#navigation').append(header);
+ const header=document.createElement('div');header.className='identity-links auth-navigation';header.innerHTML='<a href="/account/">Sign in</a><a href="/account/?mode=signup">Sign up</a>';document.querySelector('#navigation').append(header);
  const host=document.querySelector('#content');
  if(path==='/terms/')host.innerHTML=title('TERMS','Explore responsibly.')+'<section class="panel account-v4"><p>SOMAS is a concept demonstration. No investment, employment, payment, AI execution or blockchain verification is offered or guaranteed. Community contributions and inquiries are real. Do not share confidential information. Contact the founder through the contact form for access, privacy or removal requests.</p><a href="/privacy/">Privacy</a></section>';
  if(path==='/account/')renderAuth(host);
@@ -15,7 +15,7 @@ export async function mountV4(path){let config;try{config=await api('/api/auth/c
  if(path==='/owner/')await ownerSettings(host);
  if(path==='/meet/')await meetingPage(host);
  if(path==='/admin/'){const section=document.createElement('section');section.className='panel account-v4';section.innerHTML='<h2>Access review & live bookings</h2><a href="/owner/">Review role requests / owner integration ↗</a><div id="calendar-admin"></div>';host.append(section);try{const r=await api('/api/admin/calendar-meetings');section.querySelector('#calendar-admin').innerHTML=r.meetings.map(m=>`<p>${esc(m.guest_name)} · ${esc(m.state)} · ${esc(new Date(m.starts_at).toLocaleString())} <a href="/meet/?id=${esc(m.id)}">Review ↗</a></p>`).join('')||'<p>No live Calendar bookings.</p>';}catch{section.querySelector('#calendar-admin').textContent='Sign in with authorized staff access.';}}
- try{const a=await api('/api/account');if(path==='/account/'&&!new URLSearchParams(location.search).get('mode')){location.replace('/settings/');return true;}header.innerHTML=`<a href="/settings/">${esc(a.profile.display_name)} · ${esc(a.role)}</a><a class="secondary" href="/meet/">Schedule a Meeting</a>${a.isOwner?'<a href="/owner/">Owner settings</a>':''}`;}catch{}
+ try{const a=await api('/api/account');if(path==='/account/'&&!new URLSearchParams(location.search).get('mode')){location.replace('/settings/');return true;}header.innerHTML=`<a href="/settings/"><span class="user-avatar" aria-hidden="true">${esc(Array.from(a.profile.display_name||"U")[0].toUpperCase())}</span>${esc(a.profile.display_name)} · ${esc(a.role)}</a>${a.isOwner?'<a href="/owner/">Owner settings</a>':''}`;}catch{}
  return true;
 }
 function renderAuth(host,mode=new URLSearchParams(location.search).get('mode')||'login'){
