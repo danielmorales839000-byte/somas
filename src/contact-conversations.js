@@ -8,7 +8,8 @@ export async function contactConversations(req,env){
  const isStaff=staff(user,env),url=new URL(req.url);
  if(url.pathname==='/api/contact/conversations'&&req.method==='GET'){
   const threads=await sql`SELECT id,kind,payload->>'subject' AS subject,payload->>'message' AS message,payload->>'name' AS name,created_at FROM public_submissions WHERE kind='contact' AND lower(payload->>'email')=lower(${user.email}) ORDER BY created_at DESC LIMIT 50`;
-  return json({threads,limit:50});
+  const replies=await sql`SELECT r.id,r.submission_id,r.body,r.from_staff,r.created_at FROM contact_replies r JOIN public_submissions s ON s.id=r.submission_id WHERE s.kind='contact' AND lower(s.payload->>'email')=lower(${user.email}) ORDER BY r.created_at DESC,r.id DESC LIMIT 200`;
+  return json({threads,replies:replies.reverse(),limit:50,replyLimit:200});
  }
  const id=url.pathname.match(/^\/api\/contact\/conversations\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)?.[1];requireThat(id,'not_found',404);
  const [thread]=await sql`SELECT id,payload,created_at FROM public_submissions WHERE id=${id}::uuid AND kind='contact' AND (${isStaff} OR lower(payload->>'email')=lower(${user.email}))`;

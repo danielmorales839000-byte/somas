@@ -394,3 +394,6 @@ for(const [index,thread] of exampleDiscussions.entries()){
   {author:'Virtual collaborator '+String(index+1).padStart(2,'0'),body:`For this ${topic.toLowerCase()} example, keep the request, proposed action, permission decision, and test result together. A human should be able to inspect or stop the workflow. The animation itself is not evidence that work succeeded.`}
  ];
 }
+
+const personas=['Maya Chen','Alex Morgan','Sofia Park','Daniel Reed','Nina Ivanova','Ethan Brooks','Lina Torres','Owen Clark','Aisha Malik','Noah Kim','Elena Rossi'];
+for(const [i,d] of exampleDiscussions.entries()){d.persona=personas[i%personas.length];d.replies.forEach((r,j)=>{r.persona=j===1?d.persona:personas[(i+j+3)%personas.length];});}

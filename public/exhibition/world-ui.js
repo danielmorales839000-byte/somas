@@ -74,7 +74,7 @@ export function designedPage(path, original) {
       original.slice(original.indexOf('<div class="video-grid">'))
     );
   if (path === "/contact/")
-    return `<div class="contact-conversation-layout"><section class="panel contact-inbox"><h2>Your conversations</h2><div id="contact-conversations"><p>Sign in with a verified account to view your private messages and our replies.</p><a href="/account/">Sign in ↗</a></div></section><section class="panel form-panel"><h2>Send a new message</h2>${original.slice(original.indexOf('<form id="public-form"'),original.indexOf('</form>')+7)}<div class="founder-links"><a href="/contact/#public-form">Contact the SOMAS founder ↗</a><a href="https://t.me/smartboard0x0" target="_blank" rel="noopener">Telegram @smartboard0x0 ↗</a></div></section></div>`;
+    return `<div class="contact-conversation-layout"><section class="panel contact-chat"><header class="support-chat-header"><span class="support-avatar">S</span><div><h2>Talk to SOMAS</h2><p>Your messages and our team’s replies</p></div></header><div id="contact-conversations"></div><div id="contact-new-message">${original.slice(original.indexOf('<form id="public-form"'),original.indexOf('</form>')+7)}</div></section><aside class="panel contact-direct"><h2>Stay in touch</h2><p>Questions, feedback, or a conversation about SOMAS.</p><div class="founder-links"><a href="/contact/#public-form">Contact the SOMAS founder ↗</a><a href="https://t.me/smartboard0x0" target="_blank" rel="noopener">Telegram @smartboard0x0 ↗</a></div></aside></div>`;
   return original;
 }
 export async function mountWorldUI(path) {

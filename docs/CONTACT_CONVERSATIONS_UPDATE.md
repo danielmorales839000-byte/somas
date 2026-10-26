@@ -9,3 +9,7 @@ Contact Us keeps the public guest contact form and founder/Telegram links. The d
 Sharing presents all 12 platform tiles at once, with concept chips instead of dropdowns. A tile opens its share composer or manual posting site. No automatic posting or platform sign-in occurs. X uses a concise template; edited long drafts are used by supported other destinations. Facebook/LinkedIn share the link and need pasted text.
 
 Validation: actual isolated PostgreSQL-WASM ownership, staff reply, notification mock, guest denial, cross-account denial, and migration reapplication. Browser preview uses disposable test identities and mocked Gmail; live Google delivery is not verified. No production deployment performed.
+
+## Corrected layout
+Example discussions now appear directly in the normal discussion list, use the same search and category controls, and open full-page threads with avatars and three sample replies. Fictional examples remain labeled. The separate example accordion/dialog is removed.
+Contact Us now presents one chat transcript on the left (visitor messages and team replies), a composer below it, and direct founder/Telegram links on the right. Verified users see their combined stored message history. Guests can send through the first-message form. Staff replies remain genuine; no automated AI replies are fabricated.

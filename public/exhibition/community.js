@@ -216,12 +216,14 @@ export async function mountCommunity() {
   if (path === "/discussions/moderation") return moderationView(root);
   const profile = path.match(/^\/discussions\/profiles\/([0-9a-f-]+)$/i);
   if (profile) return profileView(root, profile[1]);
+  const example = path.match(/^\/discussions\/(example-\d{2})$/);
+  if(example)return exampleThreadView(root,example[1]);
   const thread = path.match(/^\/discussions\/([0-9a-f-]+)$/i);
   if (thread) return detailView(root, thread[1]);
   return listView(root);
 }
 function communityBar() {
-  return `<div class="community-session"><span class="real-label"><i></i> REAL COMMUNITY · HUMAN CONTRIBUTIONS</span><div>${session ? `<a href="/account/">${avatar(session.profile.display_name)} My community</a>${session.isAdmin ? '<a href="/admin/">Administrator ↗</a><a href="/discussions/moderation/">Moderation ↗</a>' : ""}` : '<a href="/account/">Sign in / Create account ↗</a>'}</div></div>`;
+  return `<div class="community-session"><span class="real-label"><i></i> COMMUNITY · DISCUSSIONS</span><div>${session ? `<a href="/account/">${avatar(session.profile.display_name)} My community</a>${session.isAdmin ? '<a href="/admin/">Administrator ↗</a><a href="/discussions/moderation/">Moderation ↗</a>' : ""}` : '<a href="/account/">Sign in / Create account ↗</a>'}</div></div>`;
 }
 async function listView(root) {
   root.innerHTML = `${communityBar()}<section class="community-hero"><button class="primary" data-new>Start a Discussion ↗</button></section><div class="community-layout"><section><label class="search-label" for="discussion-search">Find a conversation</label><input type="search" id="discussion-search" placeholder="Search ideas, questions and feedback…" maxlength="100"><div class="community-filters"><select id="discussion-category" aria-label="Discussion category"><option value="">All categories</option>${Object.entries(
@@ -239,16 +241,8 @@ async function listView(root) {
     )
     .join(
       "",
-    )}</div></div><div class="community-note panel"><span class="note-symbol">✧</span><h3>A thoughtful place to build an idea.</h3><p>Be curious. Challenge ideas respectfully. Keep personal and customer data private.</p><a href="/contact/">Contact the SOMAS team ↗</a></div><p class="fine muted">Agent and blockchain demonstrations are simulated. Posts, replies and votes here are genuine database records.</p></aside></div>`;
+    )}</div></div><div class="community-note panel"><span class="note-symbol">✧</span><h3>A thoughtful place to build an idea.</h3><p>Be curious. Challenge ideas respectfully. Keep personal and customer data private.</p><a href="/contact/">Contact the SOMAS team ↗</a></div><p class="fine muted">Agent and blockchain demonstrations are simulated. Member posts, replies and votes are real. Labeled example conversations are fictional.</p></aside></div>`;
   bindNew(root);
-  const examples=document.createElement('details');examples.className='panel example-discussions';examples.open=true;
-  examples.innerHTML='<summary>55 example discussions · fictional contributors</summary><p class="fine">Illustrative conversations about the SOMAS idea. These are not real posts or accounts, have static example replies and cannot receive real votes or replies, and are excluded from administrator totals.</p><label>Search examples<input type="search" id="example-search" placeholder="Restaurant, verification, budgets…"></label><div id="example-list"></div><button class="secondary" id="example-more">Show more examples</button>';
-  root.querySelector('.community-layout').before(examples);
-  let exampleLimit=5;
-  const exampleDialog=document.createElement('dialog');exampleDialog.className='admin-detail-dialog example-thread-dialog';exampleDialog.setAttribute('aria-label','Fictional discussion thread');document.body.append(exampleDialog);
-  const openExample=id=>{const x=exampleDiscussions.find(t=>t.id===id);exampleDialog.innerHTML=`<button class="dialog-close" aria-label="Close example discussion">×</button><p class="source-chip">FICTIONAL CONVERSATION · NOT REAL USERS</p><h2>${esc(x.title)}</h2><article class="message-bubble"><strong>${esc(x.author)}</strong><p>${esc(x.body)}</p></article>${x.replies.map(r=>`<article class="message-bubble"><strong>${esc(r.author)}</strong><p>${esc(r.body)}</p></article>`).join('')}<p class="fine">This entire thread is a static example. Start a real discussion to share your own thoughts.</p>`;exampleDialog.querySelector('button').onclick=()=>exampleDialog.close();exampleDialog.showModal();};
-  const renderExamples=()=>{const query=examples.querySelector('input').value.toLowerCase();const rows=exampleDiscussions.filter(x=>(x.title+' '+x.body+' '+x.category).toLowerCase().includes(query));examples.querySelector('#example-list').innerHTML=rows.slice(0,exampleLimit).map(x=>`<article class="discussion-card"><div class="discussion-votes"><strong>✧</strong><small>EXAMPLE</small></div><div class="discussion-summary"><div class="discussion-labels">${categoryTag(x.category)}<span class="source-chip">FICTIONAL</span></div><h3><button class="example-thread-link" data-example="${x.id}">${esc(x.title)}</button></h3><p>${esc(x.body.slice(0,220))}…</p><div class="discussion-meta">${avatar(x.author)}<span>${esc(x.author)}</span><span>${x.replies.length} example replies</span></div></div><button class="discussion-arrow" data-example="${x.id}" aria-label="Read example ${esc(x.title)}">↗</button></article>`).join('')||'<p>No matching examples.</p>';examples.querySelector('#example-more').hidden=rows.length<=exampleLimit;examples.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>openExample(b.dataset.example));};
-  examples.querySelector('input').oninput=()=>{exampleLimit=5;renderExamples();};examples.querySelector('#example-more').onclick=()=>{exampleLimit+=10;renderExamples();};renderExamples();
   let next = null,
     sequence = 0,
     timer;
@@ -269,19 +263,12 @@ async function listView(root) {
     try {
       const data = await api("/api/community/discussions?" + p);
       if (turn !== sequence) return;
-      if (more)
-        list.insertAdjacentHTML(
-          "beforeend",
-          data.discussions.map(card).join(""),
-        );
-      else
-        list.innerHTML = data.discussions.length
-          ? data.discussions.map(card).join("")
-          : empty(
-              "A new conversation starts with you.",
-              "No matching discussions yet. Share an idea, ask a question, or offer a useful perspective.",
-            );
-      next = data.next;
+      const offset=Number(p.get('offset')||0),q=p.get('q').toLowerCase(),category=p.get('category');
+      const examples=exampleDiscussions.filter(x=>(!category||x.category===category)&&(x.title+' '+x.body).toLowerCase().includes(q)&&p.get('sort')!=='unanswered');
+      const samplePage=examples.slice(offset,offset+20);
+      const markup=data.discussions.map(card).join('')+samplePage.map(exampleCard).join('');
+      if(more)list.insertAdjacentHTML('beforeend',markup);else list.innerHTML=markup||empty('No matching conversations.','Try another search or start a discussion.');
+      next=data.next??(examples.length>offset+20?offset+20:null);
       button.hidden = next === null;
       bindNew(list);
     } catch (e) {
@@ -728,3 +715,6 @@ async function moderationView(root) {
     root.firstChild.textContent = e.message;
   }
 }
+
+function exampleCard(x){return `<article class="discussion-card"><div class="discussion-votes"><strong>—</strong><small>EXAMPLE</small></div><div class="discussion-summary"><div class="discussion-labels">${categoryTag(x.category)}<span class="source-chip">Example conversation</span></div><h3><a href="/discussions/${x.id}/">${esc(x.title)}</a></h3><p>${esc(x.body.slice(0,230))}…</p><div class="discussion-meta">${avatar(x.persona)}<span>${esc(x.persona)}</span><span>${x.replies.length} example replies</span></div></div><a class="discussion-arrow" href="/discussions/${x.id}/" aria-label="Open ${esc(x.title)}">↗</a></article>`;}
+function exampleThreadView(root,id){const x=exampleDiscussions.find(d=>d.id===id);if(!x){root.textContent='Discussion not found.';return;}root.innerHTML=`${communityBar()}<a href="/discussions/">← All discussions</a><article class="panel example-full-thread"><div class="discussion-labels">${categoryTag(x.category)}<span class="source-chip">Fictional example · not a real user post</span></div><h1>${esc(x.title)}</h1><div class="discussion-meta">${avatar(x.persona)}<strong>${esc(x.persona)}</strong></div><p class="application-message">${esc(x.body)}</p></article><section class="example-replies"><h2>${x.replies.length} replies · example conversation</h2>${x.replies.map(r=>`<article class="panel example-full-thread"><div class="discussion-meta">${avatar(r.persona)}<strong>${esc(r.persona)}</strong><small>Example participant</small></div><p class="application-message">${esc(r.body)}</p></article>`).join('')}<a class="primary" href="/discussions/">Join a real discussion ↗</a></section>`;}
