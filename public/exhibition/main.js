@@ -1,3 +1,4 @@
+import {mountSharing} from './sharing.js';
 import { mountV4 } from "./account-v4.js";
 import { mountV3 } from "./v3.js";
 import { mountDataset } from "./dataset-ui.js";
@@ -847,43 +848,7 @@ if (path === "/submissions/") {
   };
   $("#more-submissions").onclick = load;
 }
-const share = $("#share-dialog");
-document
-  .querySelectorAll("[data-share]")
-  .forEach((b) => (b.onclick = () => share.showModal()));
-share.querySelector(".dialog-close").onclick = () => share.close();
-const shareURL = location.origin;
-$("#share-text").value =
-  "OUR FUTURE WITH AI — Imagine your own self-organizing AI organization, and a network connecting independent teams. Explore the SOMAS concept: " +
-  shareURL;
-$("#fb-share").href =
-  "https://www.facebook.com/sharer/sharer.php?u=" +
-  encodeURIComponent(shareURL);
-const copy = async () => {
-  try {
-    await navigator.clipboard.writeText($("#share-text").value);
-    $("#share-status").textContent =
-      "Copied. Review and publish in your chosen platform.";
-  } catch {
-    $("#share-text").focus();
-    $("#share-text").select();
-    $("#share-status").textContent =
-      "Use Command+C or Ctrl+C to copy the selected post.";
-  }
-};
-$("#copy-share").onclick = copy;
-$("#native-share").onclick = async () => {
-  if (!navigator.share) return copy();
-  try {
-    await navigator.share({
-      title: "OUR FUTURE WITH AI — SOMAS",
-      text: $("#share-text").value,
-      url: shareURL,
-    });
-  } catch (e) {
-    if (e.name !== "AbortError") copy();
-  }
-};
+mountSharing();
 
 // Keep mobile navigation accessible without the exhibition breadcrumb strip.
 const pageStrip=document.querySelector('.topbar');
