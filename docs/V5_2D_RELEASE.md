@@ -35,3 +35,7 @@ Copy the full project into the existing SOMAS checkout, preserving its `.git`, l
 No v5 schema migration is introduced. If the earlier private Contact conversation update has not been applied, apply `db/007_contact_conversations.sql` through the existing Neon migration procedure before enabling private conversation replies. It is additive. Do not delete or recreate production data.
 
 No production push or deployment was performed. Pushing `main` can trigger the existing Cloudflare GitHub deployment; do it only when ready.
+
+## Discussion content update
+
+Removed the redundant COMMUNITY / My community strip. Replaced all 55 static example conversations and their 165 replies with English discussion of SOMAS goals, organization, trainable filters, evaluation, application evolution, Assistant/Virtual Customer roles, independent participants, cross-Manager collaboration and blockchain evidence. Fictional examples remain labeled; existing real visitor posts and database records are unchanged. Browser category filtering and strip removal verified. Full check: 72 passed, 1 skipped, 0 failures.

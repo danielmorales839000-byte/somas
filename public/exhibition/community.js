@@ -223,8 +223,9 @@ export async function mountCommunity() {
   return listView(root);
 }
 function communityBar() {
-  return `<div class="community-session"><span class="real-label"><i></i> COMMUNITY · DISCUSSIONS</span><div>${session ? `<a href="/account/">${avatar(session.profile.display_name)} My community</a>${session.isAdmin ? '<a href="/admin/">Administrator ↗</a><a href="/discussions/moderation/">Moderation ↗</a>' : ""}` : '<a href="/account/">Sign in / Create account ↗</a>'}</div></div>`;
+  return '';
 }
+
 async function listView(root) {
   root.innerHTML = `${communityBar()}<section class="community-hero"><button class="primary" data-new>Start a Discussion ↗</button></section><div class="community-layout"><section><label class="search-label" for="discussion-search">Find a conversation</label><input type="search" id="discussion-search" placeholder="Search ideas, questions and feedback…" maxlength="100"><div class="community-filters"><select id="discussion-category" aria-label="Discussion category"><option value="">All categories</option>${Object.entries(
     categories,
