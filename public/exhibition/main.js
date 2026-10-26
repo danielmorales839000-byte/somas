@@ -884,3 +884,12 @@ $("#native-share").onclick = async () => {
     if (e.name !== "AbortError") copy();
   }
 };
+
+// Keep mobile navigation accessible without the exhibition breadcrumb strip.
+const pageStrip=document.querySelector('.topbar');
+const navigationToggle=document.querySelector('#menu');
+if(pageStrip && navigationToggle){
+  navigationToggle.classList.add('compact-menu-toggle');
+  document.body.append(navigationToggle);
+  pageStrip.hidden=true;
+}
