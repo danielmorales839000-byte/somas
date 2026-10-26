@@ -1,3 +1,4 @@
+import {exampleDiscussions} from './example-discussions.js';
 const $ = (s) => document.querySelector(s);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -240,6 +241,12 @@ async function listView(root) {
       "",
     )}</div></div><div class="community-note panel"><span class="note-symbol">✧</span><h3>A thoughtful place to build an idea.</h3><p>Be curious. Challenge ideas respectfully. Keep personal and customer data private.</p><a href="/contact/">Contact the SOMAS team ↗</a></div><p class="fine muted">Agent and blockchain demonstrations are simulated. Posts, replies and votes here are genuine database records.</p></aside></div>`;
   bindNew(root);
+  const examples=document.createElement('details');examples.className='panel example-discussions';examples.open=true;
+  examples.innerHTML='<summary>55 example discussions · fictional contributors</summary><p class="fine">Illustrative conversations about the SOMAS idea. These are not real posts or accounts, cannot receive votes or replies, and are excluded from administrator totals.</p><label>Search examples<input type="search" id="example-search" placeholder="Restaurant, verification, budgets…"></label><div id="example-list"></div><button class="secondary" id="example-more">Show more examples</button>';
+  root.querySelector('.community-layout').before(examples);
+  let exampleLimit=5;
+  const renderExamples=()=>{const query=examples.querySelector('input').value.toLowerCase();const rows=exampleDiscussions.filter(x=>(x.title+' '+x.body+' '+x.category).toLowerCase().includes(query));examples.querySelector('#example-list').innerHTML=rows.slice(0,exampleLimit).map(x=>`<article><small>FICTIONAL EXAMPLE · ${esc(x.category)} · ${esc(x.author)}</small><h3>${esc(x.title)}</h3><details><summary>Read example conversation starter</summary><p class="application-message">${esc(x.body)}</p></details></article>`).join('')||'<p>No matching examples.</p>';examples.querySelector('button').hidden=rows.length<=exampleLimit;};
+  examples.querySelector('input').oninput=()=>{exampleLimit=5;renderExamples();};examples.querySelector('button').onclick=()=>{exampleLimit+=10;renderExamples();};renderExamples();
   let next = null,
     sequence = 0,
     timer;

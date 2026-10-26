@@ -26,8 +26,29 @@ export async function administration(req, env) {
       await sql`SELECT p.id AS profile_id,p.display_name,u.email,u.created_at,p.suspended FROM users u LEFT JOIN community_profiles p ON p.user_id=u.id ORDER BY u.created_at DESC LIMIT 100`;
     const submissions =
       await sql`SELECT id,kind,payload,created_at FROM public_submissions ORDER BY created_at DESC LIMIT 100`;
+    let overview=null;
+    if(v4(env)){
+      const [totals]=await sql`SELECT
+       (SELECT count(*)::int FROM users WHERE verified_at IS NOT NULL) AS verified,
+       (SELECT count(*)::int FROM users WHERE account_status<>'active') AS restricted,
+       (SELECT count(*)::int FROM community_discussions WHERE status='visible') AS discussions,
+       (SELECT count(*)::int FROM community_replies WHERE status='visible') AS replies,
+       (SELECT count(*)::int FROM public_submissions WHERE coalesce(payload->>'reviewStatus','new') IN ('new','reviewing')) AS awaiting_review,
+       (SELECT count(*)::int FROM calendar_meetings WHERE state='confirmed' AND starts_at>=now()) AS upcoming,
+       (SELECT count(*)::int FROM outbound_email WHERE state='failed') AS failed_emails`;
+      const daily=await sql`SELECT d::date::text AS day,
+       (SELECT count(*)::int FROM users WHERE created_at>=d AND created_at<d+interval '1 day') AS users,
+       (SELECT count(*)::int FROM public_submissions WHERE created_at>=d AND created_at<d+interval '1 day') AS inquiries,
+       (SELECT count(*)::int FROM community_discussions WHERE created_at>=d AND created_at<d+interval '1 day') AS discussions
+       FROM generate_series(date_trunc('day',now())-interval '29 days',date_trunc('day',now()),interval '1 day') d ORDER BY d`;
+      const meetings=await sql`SELECT id,guest_name,guest_email,purpose,starts_at,ends_at,zone,state FROM calendar_meetings ORDER BY starts_at DESC LIMIT 100`;
+      const roles=await sql`SELECT role,count(*)::int AS count FROM users GROUP BY role ORDER BY count DESC`;
+      const statuses=await sql`SELECT coalesce(payload->>'reviewStatus','new') AS status,count(*)::int AS count FROM public_submissions GROUP BY coalesce(payload->>'reviewStatus','new') ORDER BY count DESC`;
+      overview={totals,daily,meetings,roles,statuses};
+    }
     return json({
       stats,
+      overview,
       users,
       submissions,
       analytics: {
