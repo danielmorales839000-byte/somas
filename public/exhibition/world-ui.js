@@ -43,7 +43,7 @@ export function designedPage(path, original) {
   if (path === "/network/")
     return `${title("02 / SOMAS NETWORK", "A constellation of <em>intelligence.</em>", "Modeled example organizations. Parallel exchanges. A shared verification concept.")}<div class="world-mode"><button data-mode="universe" class="selected">Universe</button><button data-mode="organization">Organization</button><button data-mode="verification">Verification</button><label>Find a goal <input id="world-search" placeholder="Restaurant, learning…"></label></div><div class="world-layout"><section class="world-stage panel"><div class="stage-caption"><span>SYNTHETIC NETWORK / PREPARING ORGANIZATIONS</span><span id="world-step">01 / 24</span></div>${stage("network")}${transport(true)}<div class="scene-note">Root coordinates the platform. Dots represent supplied synthetic organizations; positions are illustrative.</div></section><aside id="world-inspector" class="world-inspector panel"></aside></div><div class="organization-list" id="organization-list"></div><section class="world-evidence panel"><div class="evidence-heading"><h2>Work becomes inspectable evidence.</h2><span class="source-chip">NO LIVE BLOCKCHAIN</span></div><div class="verification-phases">${["Work", "Submit", "Evaluate", "Decide", "Record", "Learn"].map((x) => `<button data-phase="${x}">${x}</button>`).join("")}</div><ol id="world-events" class="world-events"></ol><p class="fine muted">Example references are replay IDs, not transaction hashes. No real consensus, signing, finality or on-chain ledger is connected.</p></section><dialog id="organization-dialog"><button class="dialog-close" aria-label="Close organization">×</button><div id="organization-content"></div></dialog>`;
   if (path === "/looking-for/")
-    return `${title("BUILD THE POSSIBILITY", "Your perspective.<br><em>Our next chapter.</em>", "Choose a seat at the table.")}<section class="world-stage panel companion-stage">${stage("partners")}<span class="scene-overline">THE COLLABORATION ROOM / CONCEPT</span></section><div class="partnership-stations">${[
+    return `${title("BUILD THE POSSIBILITY", "Your perspective.<br><em>Our next chapter.</em>", "Choose a seat at the table.")}<div class="partnership-stations">${[
       [
         "Contributor",
         "Testing, writing, data, design, translation and research. Compensation is not guaranteed.",
@@ -70,7 +70,7 @@ export function designedPage(path, original) {
       )}</div><p class="fine muted">Applications are real private inquiries. These are invitations to discuss, not offers of employment, investment returns or ownership.</p>`;
   if (path === "/videos/")
     return (
-      `${title("THE SOMAS SCREENING ROOM", "A future.<br><em>Worth seeing.</em>", "Concept films and the founder’s original vision.")}<section class="world-stage panel companion-stage">${stage("cinema")}<span class="scene-overline">CONCEPT SCREENING ROOM</span></section>` +
+      `${title("THE SOMAS SCREENING ROOM", "A future.<br><em>Worth seeing.</em>", "Concept films and the founder’s original vision.")}` +
       original.slice(original.indexOf('<div class="video-grid">'))
     );
   if (path === "/contact/")
@@ -691,47 +691,5 @@ export function mountMeetings() {
   };
 }
 
-export async function mountDiscussionWorld() {
-  const root = document.querySelector("#community-root");
-  if (!root || !document.querySelector("#discussion-category")) return;
-  const section = document.createElement("section");
-  section.className = "discussion-universe panel";
-  section.innerHTML =
-    '<div class="stage-caption"><span>THE IDEA CONSTELLATION</span><span>CONCEPT GEOMETRY / REAL DISCUSSIONS BELOW</span></div>' +
-    stage("discussion") +
-    '<p class="fine muted">Select a category orb to filter real conversations. Orb sizes do not represent popularity.</p>';
-  const hero = root.querySelector(".community-hero");
-  hero.after(section);
-  const host = section.querySelector("[data-world]");
-  host.querySelector(".scene-loading").remove();
-  const { createWorld } = await import("./world.js");
-  const w = createWorld(host, {
-    kind: "discussion",
-    onSelect: (id) => {
-      const select = document.querySelector("#discussion-category");
-      select.value =
-        ["platform", "network", "ideas", "questions", "general", "bugs"][
-          Number(id)
-        ] || "";
-      select.dispatchEvent(new Event("change"));
-    },
-  });
-  let raf,
-    last = 0,
-    time = 0;
-  function frame(t) {
-    if (!reduced() && !document.hidden) time += Math.min(80, t - (last || t));
-    last = t;
-    w.update(time);
-    raf = requestAnimationFrame(frame);
-  }
-  raf = requestAnimationFrame(frame);
-  addEventListener(
-    "pagehide",
-    () => {
-      cancelAnimationFrame(raf);
-      w.dispose();
-    },
-    { once: true },
-  );
-}
+// Retain the public initializer contract without creating a decorative panel.
+export async function mountDiscussionWorld() {}
