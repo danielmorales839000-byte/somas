@@ -223,7 +223,7 @@ function communityBar() {
   return `<div class="community-session"><span class="real-label"><i></i> REAL COMMUNITY · HUMAN CONTRIBUTIONS</span><div>${session ? `<a href="/account/">${avatar(session.profile.display_name)} My community</a>${session.isAdmin ? '<a href="/admin/">Administrator ↗</a><a href="/discussions/moderation/">Moderation ↗</a>' : ""}` : '<a href="/account/">Sign in / Create account ↗</a>'}</div></div>`;
 }
 async function listView(root) {
-  root.innerHTML = `${communityBar()}<section class="community-hero"><div><p class="eyebrow">ONE COMMUNITY. MANY PERSPECTIVES.</p><h1>SOMAS Community</h1><p>Discuss ideas. Share feedback. Help shape our future with AI.</p></div><button class="primary" data-new>Start a Discussion ↗</button></section><div class="community-layout"><section><label class="search-label" for="discussion-search">Find a conversation</label><input type="search" id="discussion-search" placeholder="Search ideas, questions and feedback…" maxlength="100"><div class="community-filters"><select id="discussion-category" aria-label="Discussion category"><option value="">All categories</option>${Object.entries(
+  root.innerHTML = `${communityBar()}<section class="community-hero"><button class="primary" data-new>Start a Discussion ↗</button></section><div class="community-layout"><section><label class="search-label" for="discussion-search">Find a conversation</label><input type="search" id="discussion-search" placeholder="Search ideas, questions and feedback…" maxlength="100"><div class="community-filters"><select id="discussion-category" aria-label="Discussion category"><option value="">All categories</option>${Object.entries(
     categories,
   )
     .map(([k, v]) => `<option value="${k}">${v}</option>`)

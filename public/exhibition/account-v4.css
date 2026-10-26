@@ -18,3 +18,7 @@
 }
 
 .somas-logo{display:block;flex:0 0 48px;width:48px;height:48px;filter:drop-shadow(0 5px 10px #2463d51a)}
+
+/* Screenshot-requested introductions removed; retain discussion creation action. */
+.community-hero{min-height:0!important;padding:0!important;margin:12px 0 20px!important;justify-content:flex-end}
+.spatial-home{padding-top:0!important}
