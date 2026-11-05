@@ -1,3 +1,11 @@
+# SOMAS v5.2 — Animated Network demonstration
+
+Network statistics now evolve through random browser-local submissions, reviews, Sub-Manager creation/retirement and state changes. Pause, single-step, reset and source-snapshot modes are included. See [simulation notes](docs/NETWORK_SIMULATION.md). Real backend services and records are unaffected.
+
+# SOMAS v5.2 — Network dashboard overview
+
+The dashboard now includes a blockchain-style concept overview with exact synthetic claim counts for 1h, 24h, 3d, 7d, 30d and all time. See [Network overview release notes](docs/NETWORK_OVERVIEW.md).
+
 # SOMAS v5.1 — Organization Studio dashboard
 
 The dashboard now adapts the supplied terminal-style reference to the existing SOMAS light template: selectable agent roster, animated 2D team, scenario metrics, project evolution, agent profile, Network gateway and evidence log. See [dashboard release notes](docs/DASHBOARD_STUDIO.md).

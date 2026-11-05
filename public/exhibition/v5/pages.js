@@ -1,3 +1,4 @@
+import {mountNetworkOverview} from './network-overview.js';
 import {dashboardMarkup} from './dashboard.js';
 import {create2DWorld,esc} from './characters.js';
 import {rootFrame,scenarios,DURATION,STEP,roles} from './model.js';
@@ -11,6 +12,7 @@ export function v5Markup(path){
  return null;
 }
 export async function mountV5(path){
+ if(path==='/')mountNetworkOverview();
  if(path==='/network/')return mountNetwork();
  const host=document.querySelector('#team-room');if(!host)return;
  let scenario=new URLSearchParams(location.search).get('scenario')||'change';if(!scenarios[scenario])scenario='change';

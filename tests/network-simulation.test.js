@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {NetworkSimulation} from '../public/exhibition/v5/network-simulation.js';
+import {validateOverview} from '../public/exhibition/v5/network-overview.js';
+const base=JSON.parse(readFileSync(new URL('../public/exhibition/dataset/network-overview.json',import.meta.url)));
+test('random lifecycle and verification events keep populations, status totals, claim outcomes and chart bins consistent',()=>{const initial=JSON.stringify(base),sim=new NetworkSimulation(base,1954),kinds=new Set();for(let i=0;i<240;i++){kinds.add(sim.step());if(i%20===0){const d=sim.snapshot();validateOverview(d);assert.equal(Object.values(d.states).reduce((a,b)=>a+b,0),d.counts.somas);assert.equal(d.counts.agents,10+8*(d.counts.somas-1));assert(d.states.working>=1);for(const r of Object.values(d.ranges)){assert.equal(r.approved+r.rejected+r.pending,r.total);for(const state of ['approved','rejected','pending'])assert.equal(r.bins.reduce((a,b)=>a+b[state],0),r[state]);}}}for(const k of ['created','retired','submitted','approved','rejected','status'])assert(kinds.has(k),k);assert(sim.blocks[0].height>1500);assert.equal(JSON.stringify(base),initial);assert(sim.events.length<=8);});
+test('replaying a seed reproduces events and does not change the source snapshot',()=>{const a=new NetworkSimulation(base,93),b=new NetworkSimulation(base,93);for(let i=0;i<35;i++){assert.equal(a.step(),b.step());}assert.deepEqual(a.snapshot(),b.snapshot());});
+test('Root cannot be retired and the session limit prevents unbounded accumulation',()=>{const sim=new NetworkSimulation({...base,counts:{...base.counts,somas:1,agents:10},states:{working:1}},7);for(let i=0;i<100;i++)sim.step();assert(sim.snapshot().counts.somas>=1);assert(sim.states.working>=1);sim.steps=10000;const n=sim.claims.length;assert.equal(sim.step(),'session_limit');assert.equal(sim.claims.length,n);});
