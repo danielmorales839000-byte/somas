@@ -7,3 +7,5 @@ Existing installations keep their users and sessions. Legacy AI, project and bil
 V4 must not be enabled before migration 006 and private owner bootstrap. See `docs/V4_SETUP.md`; no database changes run automatically at application startup. Use Neon SQL Editor to execute the complete migration file, including its transaction.
 
 For private Contact Us conversation replies, also apply `007_contact_conversations.sql` before deploying that update.
+
+For v6 contact imports and broadcasts, apply the complete `008_import_broadcast.sql` after existing migrations. This additive migration creates separate contacts/subscription/campaign tables and never promotes imported addresses into users. See `docs/IMPORT_BROADCAST_SETUP.md`.

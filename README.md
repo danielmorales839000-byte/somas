@@ -1,3 +1,7 @@
+# SOMAS 6.0.1 — restored Import Contacts and Broadcasts
+
+The full project includes the new administrator tabs. Apply `db/008_import_broadcast.sql` before using them. Read [setup](docs/IMPORT_BROADCAST_SETUP.md). External email is off by default; no deployment or real email was performed here.
+
 # SOMAS v5.2 — Animated Network demonstration
 
 Network statistics now evolve through random browser-local submissions, reviews, Sub-Manager creation/retirement and state changes. Pause, single-step, reset and source-snapshot modes are included. See [simulation notes](docs/NETWORK_SIMULATION.md). Real backend services and records are unaffected.

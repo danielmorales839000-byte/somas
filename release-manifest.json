@@ -1,0 +1,17 @@
+{
+  "version": "6.0.1",
+  "features": [
+    "Import Contacts",
+    "Broadcasts"
+  ],
+  "files": {
+    "src/communications.js": "0f83f99b2bbdae7f3128a6e29dd7cc30f80efd41245f98eb8ac4830af161e94d",
+    "src/contact-import.js": "46929997869bac866949f81fcad31d3919be0808297e3a93a29b8a47d40ab741",
+    "db/008_import_broadcast.sql": "996c82e16789cc606c08e69feea852a9202e5c3cb5c37f8f692225300622ca80",
+    "public/exhibition/communications-ui.js": "60f58f0dc5532fa4a450d2bda14ec77ff3a4395ceade6b7d20585ce245983c43",
+    "public/unsubscribe/index.html": "55515461e6769cd38445c838798c69844bb9482c70caa13897c9cedbe4dd3e29",
+    "docs/IMPORT_BROADCAST_SETUP.md": "c282c910d89f36ce013d3cece70bf6036d0ad09ec332dd6eb9db5c73ee239afd"
+  },
+  "productionDeployed": false,
+  "realEmailSent": false
+}

@@ -9,3 +9,8 @@ GOOGLE_OAUTH_REDIRECT_URI=""
 GOOGLE_CREDENTIAL_ENCRYPTION_KEY=""
 GOOGLE_CALENDAR_ID="primary"
 OTP_HMAC_KEY=""
+
+# v6 real administration features; external delivery disabled until authorized
+CONTACT_IMPORT_ENABLED=true
+BROADCAST_ENABLED=true
+BROADCAST_EMAIL_ENABLED=false

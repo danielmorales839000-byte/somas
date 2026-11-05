@@ -17,7 +17,10 @@
   },
   "vars": {
     "PLATFORM_NAME": "SOMAS",
-    "AUTH_V4_ENABLED": "true"
+    "AUTH_V4_ENABLED": "true",
+    "CONTACT_IMPORT_ENABLED": "true",
+    "BROADCAST_ENABLED": "true",
+    "BROADCAST_EMAIL_ENABLED": "false"
   },
   "triggers": {
     "crons": []
