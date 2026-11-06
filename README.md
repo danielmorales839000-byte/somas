@@ -1,3 +1,9 @@
+# SOMAS 6.1 — Document email broadcasts
+
+Upload a DOCX, CSV or TXT contact document in **Admin panel → Broadcasts** (also available under Imported Contacts). Analyze it, enter a subject and message, review all extracted recipients, then click **Broadcast**. Recipients do not need SOMAS accounts or email verification. Each gets a separate email from the connected owner Gmail.
+
+**Upgrade:** apply `db/009_document_broadcast.sql` after migrations 004–008, enable `BROADCAST_EMAIL_ENABLED` in `wrangler.jsonc`, and use the existing Gmail connection and secrets. See [document broadcast setup](docs/DOCUMENT_BROADCAST_SETUP.md). Production was not deployed and no real emails were sent during development.
+
 # SOMAS 6.0.1 — restored Import Contacts and Broadcasts
 
 The full project includes the new administrator tabs. Apply `db/008_import_broadcast.sql` before using them. Read [setup](docs/IMPORT_BROADCAST_SETUP.md). External email is off by default; no deployment or real email was performed here.

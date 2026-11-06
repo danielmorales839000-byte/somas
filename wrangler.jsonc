@@ -20,7 +20,9 @@
     "AUTH_V4_ENABLED": "true",
     "CONTACT_IMPORT_ENABLED": "true",
     "BROADCAST_ENABLED": "true",
-    "BROADCAST_EMAIL_ENABLED": "false"
+    "BROADCAST_EMAIL_ENABLED": "false",
+    "DOCUMENT_EMAILS_PER_MINUTE": "30",
+    "DOCUMENT_EMAILS_PER_DAY": "400"
   },
   "triggers": {
     "crons": []

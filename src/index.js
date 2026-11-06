@@ -1,3 +1,4 @@
+import {documentBroadcasts} from './document-broadcasts.js';
 import {communications} from './communications.js';
 import {contactConversations} from './contact-conversations.js';
 import { managers } from "./managers.js";
@@ -62,6 +63,7 @@ async function handle(request, env) {
       );
     return env.ASSETS.fetch(request);
   }
+  if(path==='/api/document-email/unsubscribe')return documentBroadcasts(request,env);
   if(path==="/api/email/unsubscribe")return communications(request,env);
   if (!["GET", "HEAD"].includes(method))
     requireThat(
@@ -70,6 +72,7 @@ async function handle(request, env) {
       "request_origin_not_allowed",
       403,
     );
+  if(path.startsWith('/api/admin/document-broadcasts'))return documentBroadcasts(request,env);
   if(path.startsWith('/api/admin/contacts')||path.startsWith('/api/admin/broadcasts')||path==='/api/admin/communications/config'||path==='/api/email/preferences'||path==='/api/announcements')return communications(request,env);
   if(path.startsWith('/api/contact/conversations'))return contactConversations(request,env);
   if(path==='/api/auth/config' && method==='GET') return json({v4:v4(env),source:'real'});
