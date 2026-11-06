@@ -51,3 +51,9 @@ Tests use isolated PostgreSQL in WASM through a Neon HTTP adapter. Google OAuth 
 
 Design reference: https://buyer.alibaba.com/
 OAuth reference: https://developers.google.com/identity/protocols/oauth2/web-server
+
+## 6.2.1 callback correction
+
+Google returns from a different site, so the normal Strict session cookie is not expected on that first callback. The callback now restores the original initiator from its dedicated Lax OAuth browser cookie plus server-side, unexpired, one-use state. It verifies the current active administrator role again, and refuses a different signed-in SOMAS account. Other Gmail endpoints still require the normal sign-in session. This does not change the global cookie policy, create a session, or sign someone into SOMAS.
+
+After deploying the code, start a fresh connection from My Gmail; old callbacks and codes must not be reused. No database migration is needed beyond 010.

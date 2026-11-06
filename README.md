@@ -1,3 +1,9 @@
+# SOMAS 6.2.1 — Gmail authorization return fix
+
+Fixes `{"error":"unauthenticated"}` immediately after Google consent for administrator Gmail. The sign-in session remains `SameSite=Strict`; Google callback instead validates its dedicated Lax browser cookie and short-lived server OAuth state, rechecks the initiating administrator's current active role and consumes the state exactly once. A different signed-in account, missing browser cookie, expired state or removed administrator access still fails closed.
+
+Copy this release into the existing project and deploy through your normal GitHub/Cloudflare workflow. No new migration, secrets or Google redirect URI changes are needed beyond the 6.2 setup below. After deployment, Roman should begin a fresh connection from Admin → My Gmail → Connect my Gmail. Do not reuse the old callback URL or old authorization code.
+
 # SOMAS 6.2 — Personal Gmail and refreshed panels
 
 Each administrator can connect their own Gmail under **Admin panel → My Gmail**. Broadcast includes a **Send from** selector for their personal connection or the existing shared owner sender. Each campaign freezes its sender. Another administrator cannot dispatch a personal-sender campaign. All messages still require the selected Gmail authorization.

@@ -6,3 +6,7 @@
 - Existing core account, community, simulations, document parser and broadcast tests remain passing.
 - OAuth and Gmail HTTP responses were mocked. No production deployment, credential entry, live consent flow or real email sends occurred.
 - Screenshots show example.test fixture identities, not evidence that Roman's live Gmail is connected.
+
+## 6.2.1
+
+`npm run check`: 109 tests, 108 passed, 0 failed, 1 skipped; syntax checks passed. Added regression coverage for a Google return without the normal session cookie, plus missing OAuth browser cookie, expired state and revoked administrator authority. OAuth/Gmail remain mocked; live Google consent must be retried by the administrator after deployment.
