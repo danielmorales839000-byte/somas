@@ -2,18 +2,19 @@
 
 ## What changed
 
-Admin panel → Broadcasts and Imported Contacts now open the document-email workflow:
+Admin panel → Broadcasts is the only contact-email action. The separate Import tab is removed.
 
-1. Upload a DOCX, CSV or TXT (2 MB maximum, 1,000 distinct addresses).
-2. Click Analyze document. Valid addresses are normalized and deduplicated. Nothing is sent.
-3. Enter subject and plain text message; click Review broadcast.
-4. Inspect the full recipient list and message. The unsent draft is now saved.
-5. Click Broadcast to start individual Gmail sends. No recipient login, signup or email verification is required.
-6. Keep the page open to process the queue automatically. Pause, cancel remaining, refresh results, or resume a saved queue later.
+1. Select a DOCX, CSV or TXT (2 MB maximum, 1,000 distinct addresses).
+2. Enter the email subject and plain text message.
+3. Click Broadcast once. The app analyzes and deduplicates the document, saves the recipient snapshot, queues the campaign and starts sending immediately.
+4. View extracted recipient counts and delivery states while it runs. There is no separate Analyze, Review or Approve button.
+5. Keep the page open. Pause, cancel remaining, or resume a saved queue later.
+
+Clicking Broadcast authorizes real sending through the connected Gmail. An invalid file prevents sending. Recipients do not need accounts or verification.
 
 The parser accepts Gmail and other valid email domains. It validates syntax, not mailbox existence. DOCX, CSV and TXT are supported; legacy .doc and PDF are not supported. Upload bytes are not retained. Campaign recipients are stored encrypted; their full addresses are visible only to administrators on campaign review. Existing imported review reports do not silently become recipients: upload the document in the new flow.
 
-Account announcements and the prior subscriber campaigns remain available through a secondary button. Imported contacts never create authentication accounts or falsely record subscriptions.
+Legacy campaign records are retained in the database; the Broadcast interface only shows document broadcasts. Imported contacts never create authentication accounts or falsely record subscriptions.
 
 ## Deploy this upgrade
 
@@ -24,7 +25,7 @@ Account announcements and the prior subscriber campaigns remain available throug
 5. Preserve the existing Worker secrets: DATABASE_URL, ADMIN_USER_ID, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI, GOOGLE_CREDENTIAL_ENCRYPTION_KEY, OTP_HMAC_KEY and SOMAS_OWNER_EMAIL. Do not put secrets in Git. No new secret is introduced by this upgrade.
 6. Open Owner settings and confirm the owner Gmail is connected. Reconnect if permission has expired or been revoked. The sender must be the Gmail account authorized by the owner.
 7. Commit and push to the branch your Cloudflare build watches, normally main. This publishes when your connected Cloudflare build succeeds.
-8. Initially use a document containing only an email address you control. Review and broadcast a short test. Verify the inbox and results before using a larger list.
+8. Initially use a document containing only an email address you control. Broadcast a short test. Verify the inbox and results before using a larger list.
 
 This release was not deployed to production. Enabling the flag does not send emails by itself. Only the admin Broadcast action starts an approved document queue.
 

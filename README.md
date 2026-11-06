@@ -1,6 +1,12 @@
+# SOMAS 6.1.1 — Simplified Broadcast
+
+The separate Imported Contacts tab is removed. In **Admin panel → Broadcasts**, select a contact DOCX/CSV/TXT, enter subject and message, and click **Broadcast**. This single action analyzes and deduplicates addresses, prepares the recipient snapshot and starts sending immediately. No separate analysis, review or approval click is needed. Keep the page open while sending.
+
+Upgrading from 6.1 requires no additional migration or new secrets. Keep migration 009 applied and Gmail sending enabled. Earlier installations still need migrations 004–009.
+
 # SOMAS 6.1 — Document email broadcasts
 
-Upload a DOCX, CSV or TXT contact document in **Admin panel → Broadcasts** (also available under Imported Contacts). Analyze it, enter a subject and message, review all extracted recipients, then click **Broadcast**. Recipients do not need SOMAS accounts or email verification. Each gets a separate email from the connected owner Gmail.
+Upload a DOCX, CSV or TXT contact document in **Admin panel → Broadcasts**. Analyze it, enter a subject and message, review all extracted recipients, then click **Broadcast**. Recipients do not need SOMAS accounts or email verification. Each gets a separate email from the connected owner Gmail.
 
 **Upgrade:** apply `db/009_document_broadcast.sql` after migrations 004–008, enable `BROADCAST_EMAIL_ENABLED` in `wrangler.jsonc`, and use the existing Gmail connection and secrets. See [document broadcast setup](docs/DOCUMENT_BROADCAST_SETUP.md). Production was not deployed and no real emails were sent during development.
 
