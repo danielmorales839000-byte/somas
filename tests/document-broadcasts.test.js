@@ -10,7 +10,7 @@ import worker from '../src/index.js';
 test('document mail limits are bounded and configurable',()=>{assert.deepEqual(documentLimits({}),{minute:30,day:400});assert.deepEqual(documentLimits({DOCUMENT_EMAILS_PER_MINUTE:'999',DOCUMENT_EMAILS_PER_DAY:'-1'}),{minute:60,day:400});});
 test('document recipients can receive individual broadcasts without accounts or verification',async t=>{
  const pg=await postgresEngine(),db=pg.db;neonConfig.fetchFunction=pg.fetch;
- for(const file of ['006_identity_calendar.sql','008_import_broadcast.sql','009_document_broadcast.sql','009_document_broadcast.sql'])await db.exec(await readFile(new URL('../db/'+file,import.meta.url),'utf8'));
+ for(const file of ['006_identity_calendar.sql','008_import_broadcast.sql','009_document_broadcast.sql','010_admin_gmail.sql','010_admin_gmail.sql'])await db.exec(await readFile(new URL('../db/'+file,import.meta.url),'utf8'));
  const env={AUTH_V4_ENABLED:'true',ADMIN_USER_ID:'owner',DATABASE_URL:'postgresql://fixture:disposable@ep-test.us-east-2.aws.neon.tech/test?sslmode=require',CONTACT_IMPORT_ENABLED:'true',BROADCAST_ENABLED:'true',BROADCAST_EMAIL_ENABLED:'true',GOOGLE_CREDENTIAL_ENCRYPTION_KEY:'1'.repeat(64),OTP_HMAC_KEY:'a'.repeat(64),SOMAS_OWNER_EMAIL:'owner@example.test'};
  const token=await sha256('document-owner-token');await db.query("INSERT INTO users(id,email,password_hash,role,verified_at) VALUES('owner','owner@example.test','not-used','owner',now())");await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,'owner',now()+interval '1 day')",[await sha256(token)]);
  await db.query("INSERT INTO owner_integrations(id,owner_id,ciphertext,scopes) VALUES('google','owner',$1,'gmail.send')",[await seal(env,'fixture-refresh')]);

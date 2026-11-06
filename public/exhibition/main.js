@@ -1,3 +1,4 @@
+import {mountMarketShell} from './market-ui.js';
 import {mountContactInbox} from './contact-inbox.js';
 import {mountSharing} from './sharing.js';
 import { mountV4 } from "./account-v4.js";
@@ -871,3 +872,5 @@ if(feedbackAction&&!document.querySelector('.global-actions .schedule-action')){
 }
 
 if(requestedPath==='/contact/')mountContactInbox();
+
+mountMarketShell();

@@ -68,6 +68,13 @@ export async function api(path, method = "GET", data) {
     throw Object.assign(
       new Error(
         {
+          google_config_missing: "The site owner must configure Google OAuth credentials first.",
+          oauth_https_required: "Google authorization requires the public HTTPS website.",
+          personal_gmail_not_connected: "Connect your Gmail in My Gmail first.",
+          google_reconnect_required: "Reconnect this Gmail account to restore permission.",
+          google_permission_denied: "Google denied Gmail sending access. Reconnect with sending permission.",
+          google_api_not_enabled: "Enable Gmail API in the Google Cloud project for this OAuth client.",
+          google_rate_limited: "Google has limited this sender. Wait before resuming untouched emails.",
           sign_in_required: "Sign in to participate.",
           unauthenticated: "Sign in to participate.",
           not_your_content: "You can only change your own content.",

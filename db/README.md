@@ -11,3 +11,5 @@ For private Contact Us conversation replies, also apply `007_contact_conversatio
 For v6 contact imports and broadcasts, apply the complete `008_import_broadcast.sql` after existing migrations. This additive migration creates separate contacts/subscription/campaign tables and never promotes imported addresses into users. See `docs/IMPORT_BROADCAST_SETUP.md`.
 
 For v6.1 document-recipient broadcasts, apply `009_document_broadcast.sql` after 008. It creates separate document campaign/outbox tables and does not change users, passwords, subscriptions or existing campaigns.
+
+Version 6.2 adds `010_admin_gmail.sql` after 009. It creates encrypted per-administrator Gmail connections and independent OAuth state, plus frozen campaign sender fields. Existing owner Gmail and Calendar data are untouched. Reapplication is safe.

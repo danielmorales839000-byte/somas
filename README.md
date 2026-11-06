@@ -1,3 +1,24 @@
+# SOMAS 6.2 — Personal Gmail and refreshed panels
+
+Each administrator can connect their own Gmail under **Admin panel → My Gmail**. Broadcast includes a **Send from** selector for their personal connection or the existing shared owner sender. Each campaign freezes its sender. Another administrator cannot dispatch a personal-sender campaign. All messages still require the selected Gmail authorization.
+
+The public template, My SOMAS member area and admin workspace now use an original light marketplace-inspired design: warm orange actions, neutral surfaces, searchable section navigation, account summaries and a left admin menu. Existing concept simulations, discussions, account verification, meetings and contact functions remain intact.
+
+## Upgrade from 6.1.1
+
+1. Apply `db/010_admin_gmail.sql` in the same Neon database, after migrations 004–009. Do not delete data.
+2. In the existing Google OAuth web client, add this **additional authorized redirect URI** (keep the existing owner callback):
+   `https://somas-cloudflare-neon.somas.workers.dev/api/admin/gmail/callback`
+   If you use another domain, use that domain instead. My Gmail shows the exact URI for the current host.
+3. Keep the same OAuth client, client secret and encryption key. Keep `BROADCAST_EMAIL_ENABLED` set to `"true"` when you are ready to send. No new secrets are needed.
+4. Run `npm ci` and `npm run check`, commit and push to the Cloudflare-connected branch when ready.
+5. Roman signs in, opens **Admin panel → My Gmail → Connect my Gmail**, and grants Google's requested sending permission. If the OAuth app is in Testing, add his Google account to test users first.
+6. In **Broadcasts**, Roman selects **My Gmail**, chooses a document, enters subject/message and clicks Broadcast. The document is analyzed and the queue starts. Keep the page open. Test initially with an address you control.
+
+See `docs/PERSONAL_GMAIL_AND_MARKETPLACE.md` for details. No production deployment or real outgoing emails were performed during development.
+
+## Prior release documentation
+
 # SOMAS 6.1.1 — Simplified Broadcast
 
 The separate Imported Contacts tab is removed. In **Admin panel → Broadcasts**, select a contact DOCX/CSV/TXT, enter subject and message, and click **Broadcast**. This single action analyzes and deduplicates addresses, prepares the recipient snapshot and starts sending immediately. No separate analysis, review or approval click is needed. Keep the page open while sending.

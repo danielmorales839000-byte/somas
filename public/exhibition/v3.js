@@ -14,7 +14,7 @@ export function mountV3(path){
  const remember=()=>{try{localStorage.setItem('somas.invitation',String(Date.now()));}catch{}};
  dialog.querySelector('.dialog-close').onclick=()=>dialog.close();dialog.querySelector('.explore').onclick=()=>dialog.close();dialog.addEventListener('close',remember);dialog.addEventListener('cancel',remember);dialog.querySelectorAll('a').forEach(a=>a.addEventListener('click',remember));join.onclick=()=>dialog.showModal();
  let last=Date.now();try{last=Number(localStorage.getItem('somas.invitation')||0);}catch{}
- if(!['/admin/','/account/','/submissions/'].includes(path)&&Date.now()-last>30*86400000)setTimeout(()=>dialog.showModal(),500);
+ if(!['/admin/','/account/','/settings/','/owner/','/meet/','/unsubscribe/','/discussions/moderation/','/submissions/'].includes(path)&&Date.now()-last>30*86400000)setTimeout(()=>dialog.showModal(),500);
 
  if(path==='/platform/'){
  content.innerHTML=`<p class="eyebrow">SOMAS PLATFORM / SIMULATED</p><h1>One platform.<br><em>Your direction.</em></h1><div class="platform-portals"><article class="panel">${scene('root-portal')}<h2>Root Manager</h2><p>Explore ten specialists improving the platform together.</p><a class="primary" href="/platform/root-manager/">Explore the Root Manager ↗</a></article><article class="panel">${scene('manager-assembly')}<h2>Make My Own Manager</h2><p>Shape a team around your goal. A personal simulation — preview locally or save to your verified account.</p><a class="primary" href="/platform/create-manager/">Create a demo Manager ↗</a></article></div>`;

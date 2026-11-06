@@ -1,9 +1,10 @@
+import {mountAdminGmail} from './admin-gmail-ui.js';
 import {mountCommunications} from './communications-ui.js';
 import {renderContactThread} from './contact-inbox.js';
 import {api} from './community.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString():'Not recorded';
-export function adminMarkup(){return `<div class="admin-title"><h1>Admin panel</h1><span class="source-chip">PRIVATE · REAL RECORDS</span></div><p id="admin-notice" role="status">Checking access…</p><div id="admin-workspace" hidden><nav class="world-mode" aria-label="Administrator sections">${[['users','Users'],['broadcasts','Broadcasts'],['messages','Messages'],['feedback','Feedback / contact'],['meetings','Meeting requests'],['calendar','Scheduled meetings']].map(([id,name])=>`<button data-admin-tab="${id}">${name}</button>`).join('')}</nav><section id="admin-analysis"></section><label class="admin-search">Search loaded records<input id="admin-search" placeholder="Name, email, message…"></label><div id="admin-records"></div></div>`;}
+export function adminMarkup(){return `<section class="market-panel-hero"><div><span class="market-eyebrow">SOMAS MANAGEMENT CENTER</span><h1>Your people. Your impact.</h1><p>Manage your community, conversations and communications in one place.</p></div><a class="primary" href="/settings/">My account ↗</a></section><p id="admin-notice" role="status">Checking access…</p><div id="admin-workspace" hidden><div class="market-admin-layout"><nav class="world-mode market-admin-rail" aria-label="Administrator sections">${[['users','Users'],['broadcasts','Broadcasts'],['gmail','My Gmail'],['messages','Messages'],['feedback','Feedback / contact'],['meetings','Meeting requests'],['calendar','Scheduled meetings']].map(([id,name])=>`<button data-admin-tab="${id}">${name}</button>`).join('')}</nav><div class="market-admin-content"><section id="admin-analysis"></section><label class="admin-search">Search loaded records<input id="admin-search" placeholder="Name, email, message…"></label><div id="admin-records"></div></div></div></div>`;}
 export function detailRows(record){return Object.entries(record).map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v??'Not recorded')}</dd></div>`).join('');}
 export async function mountAdmin(){
  const $=s=>document.querySelector(s);
@@ -16,12 +17,12 @@ export async function mountAdmin(){
   dialog.showModal();
  };
  const table=(caption,headers,rows,open)=>{const wrap=document.createElement('div');wrap.className='panel admin-data-table';wrap.innerHTML=`<div class="admin-table-scroll"><table><caption>${esc(caption)}</caption><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((row,i)=>`<tr data-row="${i}">${row.map((v,j)=>`<td>${j===0?`<button class="table-detail-button">${esc(v)}</button>`:esc(v)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">No matching records.</td></tr>`}</tbody></table></div>`;wrap.querySelectorAll('[data-row]').forEach(tr=>tr.onclick=()=>open(Number(tr.dataset.row)));return wrap;};
- let data,tab='users';
+ let data,tab=new URLSearchParams(location.search).has('gmail')?'gmail':'users';
  const render=()=>{
   const q=$('#admin-search').value.toLowerCase();document.querySelectorAll('[data-admin-tab]').forEach(b=>{b.classList.toggle('selected',b.dataset.adminTab===tab);b.setAttribute('aria-pressed',String(b.dataset.adminTab===tab));});
-  $('#admin-analysis').hidden=tab==='broadcasts';
-  $('#admin-search').closest('label').hidden=tab==='broadcasts';
-  if(tab==='broadcasts'){const area=document.createElement('div');$('#admin-records').replaceChildren(area);mountCommunications(area,tab);return;}
+  $('#admin-analysis').hidden=['broadcasts','gmail'].includes(tab);
+  $('#admin-search').closest('label').hidden=['broadcasts','gmail'].includes(tab);
+  if(['broadcasts','gmail'].includes(tab)){const area=document.createElement('div');$('#admin-records').replaceChildren(area);if(tab==='gmail')mountAdminGmail(area);else mountCommunications(area,tab);return;}
   let view;
   if(tab==='users'){const rows=data.users.filter(u=>JSON.stringify(u).toLowerCase().includes(q));view=table('Users · latest 100',['Name','Email','Role','Status','Registered'],rows.map(u=>[u.display_name||'Member',u.email,u.role||'member',u.account_status||'active',date(u.created_at)]),i=>{const u=rows[i];show(u.display_name||'Member',{'Email':u.email,'Role':u.role,'Status':u.account_status,'Verified':u.verified_at?'Yes':'No','Registered':date(u.created_at),'Last sign-in':date(u.last_login_at),'Community restriction':u.suspended?'Restricted':'None'});});}
   else if(tab==='calendar'){const rows=(data.overview?.meetings||[]).filter(m=>JSON.stringify(m).toLowerCase().includes(q));view=table('Scheduled meetings · latest 100',['Guest','Email','Start','State'],rows.map(m=>[m.guest_name,m.guest_email,date(m.starts_at),m.state]),i=>{const m=rows[i];show('Scheduled meeting',{'Guest':m.guest_name,'Email':m.guest_email,'Topic':m.purpose,'Starts':date(m.starts_at),'Ends':date(m.ends_at),'Booking timezone':m.zone,'State':m.state},null,m);});}
